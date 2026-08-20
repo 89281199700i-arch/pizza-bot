@@ -11,7 +11,7 @@ TWITCH_BOT_NICKNAME = "deepseekbot"
 TWITCH_OAUTH_TOKEN = "oauth:0qe7od9qwu4vtzv0t5cl38h9tezroc"
 TWITCH_CHANNEL = "#QumosX"
 
-ADMIN_USER = "#kvakish_"  # ← ТВОЙ НИК (БЕЗ @)
+ADMIN_USER = "kvakish_"  # ← ТВОЙ НИК (БЕЗ @)
 
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
@@ -104,87 +104,98 @@ def handle_command(user, cmd, args, ws=None):
     if user.lower() != ADMIN_USER.lower():
         return None
     
-    # --- !админ всемпицца <число> ---
-    if cmd == "!админ всемпицца":
+    # --- !админ <подкоманда> ---
+    if cmd == "!админ":
         if not args:
-            return "❌ @{user}, напиши: !админ всемпицца <число>"
-        try:
-            amount = int(args[0])
-            if amount <= 0:
-                return "❌ @{user}, число должно быть положительным!"
+            return "❌ @{user}, напиши: !админ <команда> (помощь для списка)"
+        
+        subcmd = args[0].lower()
+        subargs = args[1:]
+        
+        # !админ всемпицца <число>
+        if subcmd == "всемпицца":
+            if not subargs:
+                return "❌ @{user}, напиши: !админ всемпицца <число>"
+            try:
+                amount = int(subargs[0])
+                if amount <= 0:
+                    return "❌ @{user}, число должно быть положительным!"
+                
+                count = 0
+                for name in list(players.keys()):
+                    p = get_player(name)
+                    p["pizza"] += amount
+                    p["total_pizza"] += amount
+                    save_player(name)
+                    count += 1
+                
+                return f"✅ @{user}, всем {count} игрокам добавлено по {amount} пиццы! 🍕"
+            except:
+                return "❌ @{user}, напиши число: !админ всемпицца 10"
+        
+        # !админ добавитьпицца <ник> <число>
+        elif subcmd == "добавитьпицца":
+            if len(subargs) < 2:
+                return "❌ @{user}, напиши: !админ добавитьпицца <ник> <количество>"
             
-            count = 0
-            for name in list(players.keys()):
-                p = get_player(name)
-                p["pizza"] += amount
-                p["total_pizza"] += amount
-                save_player(name)
-                count += 1
+            target = subargs[0]
+            try:
+                amount = int(subargs[1])
+                if amount <= 0:
+                    return "❌ @{user}, число должно быть положительным!"
+            except:
+                return "❌ @{user}, напиши число!"
             
-            return f"✅ @{user}, всем {count} игрокам добавлено по {amount} пиццы! 🍕"
-        except:
-            return "❌ @{user}, напиши число: !админ всемпицца 10"
-    
-    # --- !админ добавитьпицца <ник> <число> ---
-    elif cmd == "!админ добавитьпицца":
-        if len(args) < 2:
-            return "❌ @{user}, напиши: !админ добавитьпицца <ник> <количество>"
+            if target not in players:
+                return f"❌ @{user}, пользователь '{target}' не найден!"
+            
+            p = get_player(target)
+            p["pizza"] += amount
+            p["total_pizza"] += amount
+            save_player(target)
+            return f"✅ @{user}, у {target} добавлено {amount} пиццы! Теперь: {p['pizza']} 🍕"
         
-        target = args[0]
-        try:
-            amount = int(args[1])
-            if amount <= 0:
-                return "❌ @{user}, число должно быть положительным!"
-        except:
-            return "❌ @{user}, напиши число!"
+        # !админ удалитьпицца <ник> <число>
+        elif subcmd == "удалитьпицца":
+            if len(subargs) < 2:
+                return "❌ @{user}, напиши: !админ удалитьпицца <ник> <количество>"
+            
+            target = subargs[0]
+            try:
+                amount = int(subargs[1])
+                if amount <= 0:
+                    return "❌ @{user}, число должно быть положительным!"
+            except:
+                return "❌ @{user}, напиши число!"
+            
+            if target not in players:
+                return f"❌ @{user}, пользователь '{target}' не найден!"
+            
+            p = get_player(target)
+            if p["pizza"] < amount:
+                return f"❌ @{user}, у {target} только {p['pizza']} пиццы!"
+            
+            p["pizza"] -= amount
+            save_player(target)
+            return f"✅ @{user}, у {target} удалено {amount} пиццы! Осталось: {p['pizza']} 🍕"
         
-        if target not in players:
-            return f"❌ @{user}, пользователь '{target}' не найден!"
+        # !админ сбросить
+        elif subcmd == "сбросить":
+            players.clear()
+            save_data(players)
+            return f"✅ @{user}, все данные сброшены!"
         
-        p = get_player(target)
-        p["pizza"] += amount
-        p["total_pizza"] += amount
-        save_player(target)
-        return f"✅ @{user}, у {target} добавлено {amount} пиццы! Теперь: {p['pizza']} 🍕"
-    
-    # --- !админ удалитьпицца <ник> <число> ---
-    elif cmd == "!админ удалитьпицца":
-        if len(args) < 2:
-            return "❌ @{user}, напиши: !админ удалитьпицца <ник> <количество>"
-        
-        target = args[0]
-        try:
-            amount = int(args[1])
-            if amount <= 0:
-                return "❌ @{user}, число должно быть положительным!"
-        except:
-            return "❌ @{user}, напиши число!"
-        
-        if target not in players:
-            return f"❌ @{user}, пользователь '{target}' не найден!"
-        
-        p = get_player(target)
-        if p["pizza"] < amount:
-            return f"❌ @{user}, у {target} только {p['pizza']} пиццы!"
-        
-        p["pizza"] -= amount
-        save_player(target)
-        return f"✅ @{user}, у {target} удалено {amount} пиццы! Осталось: {p['pizza']} 🍕"
-    
-    # --- !админ сбросить ---
-    elif cmd == "!админ сбросить":
-        players.clear()
-        save_data(players)
-        return f"✅ @{user}, все данные сброшены!"
-    
-    # --- !админ помощь ---
-    elif cmd == "!админ помощь":
-        return """👑 Админ-команды:
+        # !админ помощь
+        elif subcmd == "помощь":
+            return """👑 Админ-команды:
 !админ всемпицца <число> — всем +пицца
 !админ добавитьпицца <ник> <число> — добавить игроку
 !админ удалитьпицца <ник> <число> — удалить у игрока
 !админ сбросить — удалить всех игроков
 !админ помощь — это сообщение"""
+        
+        else:
+            return f"❌ @{user}, неизвестная подкоманда. Напиши !админ помощь"
     
     return None
 
