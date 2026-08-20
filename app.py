@@ -5,19 +5,21 @@ import random
 import os
 
 # ============================================================
-#  НАСТРОЙКИ (ЗАМЕНИ НА СВОИ)
+#  НАСТРОЙКИ
 # ============================================================
 TWITCH_BOT_NICKNAME = "deepseekbot"
 TWITCH_OAUTH_TOKEN = "oauth:0qe7od9qwu4vtzv0t5cl38h9tezroc"
 TWITCH_CHANNEL = "#QumosX"
 
-SAVE_FILE = "pizza_data.json"
-COOLDOWN_TIME = 20  # секунд между !пицца
+ADMIN_USER = "kvakish_"  # ← ТВОЙ НИК (БЕЗ @)
 
-print("🚀 ЗАПУСК ПИЦЦА-БОТА")
+SAVE_FILE = "pizza_data.json"
+COOLDOWN_TIME = 5
+
+print("🚀 ЗАПУСК ПИЦЦА-БОТА (С АДМИН-КОМАНДАМИ)")
 
 # ============================================================
-#  ДАННЫЕ (СОХРАНЯЮТСЯ В JSON)
+#  ДАННЫЕ
 # ============================================================
 def load_data():
     if os.path.exists(SAVE_FILE):
@@ -51,11 +53,12 @@ def save_player(user):
 # ============================================================
 #  КОМАНДЫ
 # ============================================================
-def handle_command(user, cmd, args):
+def handle_command(user, cmd, args, ws=None):
     cmd = cmd.lower()
     player = get_player(user)
     now = time.time()
 
+    # --- ОБЫЧНЫЕ КОМАНДЫ ---
     if cmd == "!пицца":
         if user in cooldowns and now - cooldowns[user] < COOLDOWN_TIME:
             remaining = int(COOLDOWN_TIME - (now - cooldowns[user]))
@@ -95,10 +98,83 @@ def handle_command(user, cmd, args):
 !съестьпиццу — съесть 1 пиццу
 !помощь — это сообщение"""
     
+    # ============================================================
+    #  АДМИН-КОМАНДЫ (только для создателя)
+    # ============================================================
+    if user.lower() != ADMIN_USER.lower():
+        return None
+    
+    # --- ;всемпицца <число> ---
+    if cmd == ";всемпицца":
+        if not args:
+            return "❌ @{user}, напиши: ;всемпицца <число>"
+        try:
+            amount = int(args[0])
+            if amount <= 0:
+                return "❌ @{user}, число должно быть положительным!"
+            
+            count = 0
+            for name in list(players.keys()):
+                p = get_player(name)
+                p["pizza"] += amount
+                p["total_pizza"] += amount
+                save_player(name)
+                count += 1
+            
+            return f"✅ @{user}, всем {count} игрокам добавлено по {amount} пиццы! 🍕"
+        except:
+            return "❌ @{user}, напиши число: ;всемпицца 10"
+    
+    # --- ;добавитьпицца <ник> <число> ---
+    elif cmd == ";добавитьпицца":
+        if len(args) < 2:
+            return "❌ @{user}, напиши: ;добавитьпицца <ник> <количество>"
+        
+        target = args[0]
+        try:
+            amount = int(args[1])
+            if amount <= 0:
+                return "❌ @{user}, число должно быть положительным!"
+        except:
+            return "❌ @{user}, напиши число!"
+        
+        if target not in players:
+            return f"❌ @{user}, пользователь '{target}' не найден!"
+        
+        p = get_player(target)
+        p["pizza"] += amount
+        p["total_pizza"] += amount
+        save_player(target)
+        return f"✅ @{user}, у {target} добавлено {amount} пиццы! Теперь: {p['pizza']} 🍕"
+    
+    # --- ;удалитьпицца <ник> <число> ---
+    elif cmd == ";удалитьпицца":
+        if len(args) < 2:
+            return "❌ @{user}, напиши: ;удалитьпицца <ник> <количество>"
+        
+        target = args[0]
+        try:
+            amount = int(args[1])
+            if amount <= 0:
+                return "❌ @{user}, число должно быть положительным!"
+        except:
+            return "❌ @{user}, напиши число!"
+        
+        if target not in players:
+            return f"❌ @{user}, пользователь '{target}' не найден!"
+        
+        p = get_player(target)
+        if p["pizza"] < amount:
+            return f"❌ @{user}, у {target} только {p['pizza']} пиццы!"
+        
+        p["pizza"] -= amount
+        save_player(target)
+        return f"✅ @{user}, у {target} удалено {amount} пиццы! Осталось: {p['pizza']} 🍕"
+    
     return None
 
 # ============================================================
-#  WEBSOCKET (ПОДКЛЮЧЕНИЕ К TWITCH)
+#  WEBSOCKET
 # ============================================================
 def send_to_chat(ws, msg):
     if ws and ws.connected:
@@ -107,8 +183,6 @@ def send_to_chat(ws, msg):
             print(f"📤 Отправлено в чат: {msg}")
         except Exception as e:
             print(f"❌ Ошибка отправки: {e}")
-    else:
-        print("❌ WebSocket не подключён!")
 
 def on_message(ws, msg):
     for line in msg.split('\r\n'):
@@ -131,7 +205,7 @@ def on_message(ws, msg):
                     if resp:
                         send_to_chat(ws, resp)
             except Exception as e:
-                print(f"⚠️ Ошибка обработки: {e}")
+                print(f"⚠️ Ошибка: {e}")
 
 def start_bot():
     print("🔄 Подключение к Twitch...")
@@ -139,31 +213,26 @@ def start_bot():
         try:
             ws = websocket.WebSocket()
             ws.connect("wss://irc-ws.chat.twitch.tv:443")
-            
-            # Авторизация
             ws.send(f"PASS {TWITCH_OAUTH_TOKEN}\r\n")
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
-            
             print("✅ Подключено к Twitch чату!")
             send_to_chat(ws, "🍕 Пицца-бот запущен! Пиши !пицца и получай пиццу!")
             
-            # Цикл чтения сообщений
             while True:
                 try:
                     msg = ws.recv()
                     if msg:
                         on_message(ws, msg)
                 except websocket.WebSocketConnectionClosedException:
-                    print("❌ Соединение закрыто, переподключение...")
+                    print("❌ Разрыв, переподключение...")
                     break
                 except Exception as e:
-                    print(f"⚠️ Ошибка чтения: {e}")
+                    print(f"⚠️ {e}")
                     break
-                    
         except Exception as e:
-            print(f"❌ Ошибка подключения: {e}")
-            time.sleep(5)
+            print(f"❌ Ошибка: {e}")
+        time.sleep(5)
 
 if __name__ == "__main__":
     start_bot()
