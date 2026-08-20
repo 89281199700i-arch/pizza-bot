@@ -16,8 +16,11 @@ ADMIN_USER = "kvakish_"
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 
-print("🚀 ЗАПУСК ПИЦЦА-БОТА (ДИАГНОСТИКА)")
+print("🚀 ПИЦЦА-БОТ ЗАПУЩЕН")
 
+# ============================================================
+#  ДАННЫЕ
+# ============================================================
 def load_data():
     if os.path.exists(SAVE_FILE):
         try:
@@ -44,24 +47,15 @@ def save_player(user):
     save_data(players)
 
 # ============================================================
-#  ОТПРАВКА С ДИАГНОСТИКОЙ
+#  ОТПРАВКА В ЧАТ
 # ============================================================
 def send_to_chat(ws, msg):
-    print(f"🔍 send_to_chat вызвана с сообщением: {msg[:50]}...")
-    if not ws:
-        print("❌ ws = None")
-        return False
-    try:
-        print(f"🔍 ws.connected = {ws.connected}")
-        if not ws.connected:
-            print("❌ WebSocket не подключён!")
-            return False
-        ws.send(f"PRIVMSG {TWITCH_CHANNEL} :{msg}\r\n")
-        print(f"📤 Отправлено: {msg}")
-        return True
-    except Exception as e:
-        print(f"❌ Ошибка отправки: {e}")
-        return False
+    if ws and ws.connected:
+        try:
+            ws.send(f"PRIVMSG {TWITCH_CHANNEL} :{msg}\r\n")
+            print(f"📤 {msg}")
+        except Exception as e:
+            print(f"❌ Ошибка: {e}")
 
 # ============================================================
 #  КОМАНДЫ
@@ -75,49 +69,39 @@ def handle_command(user, cmd, args, ws=None):
     if cmd == "!пицца":
         if user in cooldowns and now - cooldowns[user] < COOLDOWN_TIME:
             remaining = int(COOLDOWN_TIME - (now - cooldowns[user]))
-            return f"⏳ @{user}, подожди {remaining} сек, пицца ещё готовится! 🍕"
+            return f"⏳ @{user}, подожди {remaining} сек"
         
         pizza = random.randint(1, 3)
         player["pizza"] += pizza
         player["total_pizza"] += pizza
         cooldowns[user] = now
         save_player(user)
-        return f"🍕 @{user}, ты получил {pizza} пиццы! Всего: {player['pizza']} 🍕"
+        return f"🍕 @{user}, +{pizza} пиццы! Всего: {player['pizza']}"
     
     elif cmd == "!топпицца":
         if not players:
             return "📊 Пока никто не ел пиццу!"
         top = sorted(players.items(), key=lambda x: x[1]["pizza"], reverse=True)[:5]
-        result = ["🏆 ТОП Пицца:"]
-        for i, (name, data) in enumerate(top, 1):
-            result.append(f"{i}. {name}: {data['pizza']} 🍕")
-        return " | ".join(result)
+        return " | ".join([f"{i+1}. {n}: {d['pizza']} 🍕" for i, (n, d) in enumerate(top)])
     
     elif cmd == "!пиццастата":
-        return f"📊 @{user}, у тебя {player['pizza']} 🍕 | Всего получено: {player['total_pizza']} 🍕"
+        return f"📊 @{user}, у тебя {player['pizza']} 🍕 | Всего: {player['total_pizza']}"
     
     elif cmd == "!съестьпиццу":
         if player["pizza"] <= 0:
-            return "🍕 @{user}, у тебя нет пиццы! Сначала получи её через !пицца"
+            return "🍕 @{user}, у тебя нет пиццы!"
         player["pizza"] -= 1
         save_player(user)
-        return f"🍕 @{user}, ты съел пиццу! Осталось: {player['pizza']} 🍕"
+        return f"🍕 @{user}, ты съел пиццу! Осталось: {player['pizza']}"
     
     elif cmd == "!помощь":
-        return """📖 Команды пицца-бота:
-!пицца — получить пиццу (кулдаун 5 сек)
-!топпицца — топ по пицце
-!пиццастата — твоя статистика
-!съестьпиццу — съесть 1 пиццу
-!помощь — это сообщение"""
+        return "📖 !пицца, !топпицца, !пиццастата, !съестьпиццу"
 
     # ============================================================
-    #  АДМИН-КОМАНДЫ
+    #  АДМИН-КОМАНДЫ (ПРОСТО И БЕЗ ЛИШНИХ СООБЩЕНИЙ)
     # ============================================================
     if cmd.startswith(':') and cmd.endswith(':'):
-        print(f"🔍 Обнаружена админ-команда от {user}")
         if user.lower() != ADMIN_USER.lower():
-            print(f"❌ Не админ: {user} != {ADMIN_USER}")
             return None
         
         inner = cmd[1:-1].strip()
@@ -128,103 +112,77 @@ def handle_command(user, cmd, args, ws=None):
         subcmd = parts[0].lower()
         subargs = parts[1:] if len(parts) > 1 else []
         
-        # 1️⃣ Отправляем "в обработке..."
-        processing_msg = f"🔧 Админ-команда \"{inner}\" в обработке..."
-        print(f"📤 1. Отправка: {processing_msg}")
-        send_to_chat(ws, processing_msg)
-        
-        time.sleep(0.5)
-        
-        # 2️⃣ Обрабатываем команду
-        result = None
-        
+        # --- Обработка ---
         if subcmd == "всемпицца":
             if not subargs:
-                result = "❌ @{user}, напиши: :всемпицца <число>:"
-            else:
-                try:
-                    amount = int(subargs[0])
-                    if amount <= 0:
-                        result = "❌ @{user}, число должно быть положительным!"
-                    else:
-                        count = 0
-                        for name in list(players.keys()):
-                            p = get_player(name)
-                            p["pizza"] += amount
-                            p["total_pizza"] += amount
-                            save_player(name)
-                            count += 1
-                        result = f"✅ @{user}, всем {count} игрокам добавлено по {amount} пиццы! 🍕"
-                except:
-                    result = "❌ @{user}, напиши число: :всемпицца 10:"
+                return "❌ Напиши: :всемпицца <число>:"
+            try:
+                amount = int(subargs[0])
+                if amount <= 0:
+                    return "❌ Число должно быть положительным!"
+                count = 0
+                for name in list(players.keys()):
+                    p = get_player(name)
+                    p["pizza"] += amount
+                    p["total_pizza"] += amount
+                    save_player(name)
+                    count += 1
+                return f"✅ Всем {count} игрокам +{amount} пиццы! 🍕"
+            except:
+                return "❌ Напиши число: :всемпицца 10:"
         
         elif subcmd == "добавитьпицца":
             if len(subargs) < 2:
-                result = "❌ @{user}, напиши: :добавитьпицца <ник> <количество>:"
-            else:
-                target = subargs[0]
-                try:
-                    amount = int(subargs[1])
-                    if amount <= 0:
-                        result = "❌ @{user}, число должно быть положительным!"
-                    elif target not in players:
-                        result = f"❌ @{user}, пользователь '{target}' не найден!"
-                    else:
-                        p = get_player(target)
-                        p["pizza"] += amount
-                        p["total_pizza"] += amount
-                        save_player(target)
-                        result = f"✅ @{user}, у {target} добавлено {amount} пиццы! Теперь: {p['pizza']} 🍕"
-                except:
-                    result = "❌ @{user}, напиши число!"
+                return "❌ Напиши: :добавитьпицца <ник> <число>:"
+            target = subargs[0]
+            try:
+                amount = int(subargs[1])
+                if amount <= 0:
+                    return "❌ Число должно быть положительным!"
+                if target not in players:
+                    return f"❌ Игрок '{target}' не найден!"
+                p = get_player(target)
+                p["pizza"] += amount
+                p["total_pizza"] += amount
+                save_player(target)
+                return f"✅ {target} +{amount} пиццы! Теперь: {p['pizza']} 🍕"
+            except:
+                return "❌ Напиши число!"
         
         elif subcmd == "удалитьпицца":
             if len(subargs) < 2:
-                result = "❌ @{user}, напиши: :удалитьпицца <ник> <количество>:"
-            else:
-                target = subargs[0]
-                try:
-                    amount = int(subargs[1])
-                    if amount <= 0:
-                        result = "❌ @{user}, число должно быть положительным!"
-                    elif target not in players:
-                        result = f"❌ @{user}, пользователь '{target}' не найден!"
-                    else:
-                        p = get_player(target)
-                        if p["pizza"] < amount:
-                            result = f"❌ @{user}, у {target} только {p['pizza']} пиццы!"
-                        else:
-                            p["pizza"] -= amount
-                            save_player(target)
-                            result = f"✅ @{user}, у {target} удалено {amount} пиццы! Осталось: {p['pizza']} 🍕"
-                except:
-                    result = "❌ @{user}, напиши число!"
+                return "❌ Напиши: :удалитьпицца <ник> <число>:"
+            target = subargs[0]
+            try:
+                amount = int(subargs[1])
+                if amount <= 0:
+                    return "❌ Число должно быть положительным!"
+                if target not in players:
+                    return f"❌ Игрок '{target}' не найден!"
+                p = get_player(target)
+                if p["pizza"] < amount:
+                    return f"❌ У {target} только {p['pizza']} пиццы!"
+                p["pizza"] -= amount
+                save_player(target)
+                return f"✅ {target} -{amount} пиццы! Осталось: {p['pizza']} 🍕"
+            except:
+                return "❌ Напиши число!"
         
         elif subcmd == "сбросить":
             players.clear()
             save_data(players)
-            result = f"✅ @{user}, все данные сброшены!"
+            return "✅ Все данные сброшены!"
         
         elif subcmd == "помощь":
-            result = """👑 Админ-команды (через :) :
+            return """👑 Админ-команды:
 :всемпицца <число> — всем +пицца
-:добавитьпицца <ник> <число> — добавить игроку
-:удалитьпицца <ник> <число> — удалить у игрока
-:сбросить — удалить всех игроков
+:добавитьпицца <ник> <число> — игроку
+:удалитьпицца <ник> <число> — у игрока
+:сбросить — удалить всех
 :помощь — это сообщение"""
-            print(f"📌 Результат помощи: {result}")
         
         else:
-            result = f"❌ @{user}, неизвестная команда. Напиши :помощь:"
-        
-        # 3️⃣ ОТПРАВЛЯЕМ РЕЗУЛЬТАТ
-        print(f"📤 2. Попытка отправить результат: {result}")
-        if result:
-            send_to_chat(ws, result)
-        else:
-            send_to_chat(ws, "⚠️ Что-то пошло не так. Попробуй ещё раз.")
-        
-        return None
+            return f"❌ Неизвестная команда. Напиши :помощь:"
     
     return None
 
@@ -245,19 +203,21 @@ def on_message(ws, msg):
                 text = parts[1].split(':', 1)[1].strip()
                 if user.lower() == TWITCH_BOT_NICKNAME.lower():
                     continue
-                print(f"🔍 Получено: {user} -> {text}")
+                print(f"💬 {user}: {text}")
                 if text.startswith('!'):
                     args = text.split()
                     resp = handle_command(user, args[0], args[1:], ws)
                     if resp:
                         send_to_chat(ws, resp)
                 elif text.startswith(':') and text.endswith(':'):
-                    handle_command(user, text, [], ws)
+                    resp = handle_command(user, text, [], ws)
+                    if resp:
+                        send_to_chat(ws, resp)
             except Exception as e:
-                print(f"⚠️ Ошибка: {e}")
+                print(f"⚠️ {e}")
 
 def start_bot():
-    print("🔄 Подключение к Twitch...")
+    print("🔄 Подключение...")
     while True:
         try:
             ws = websocket.WebSocket()
@@ -265,8 +225,8 @@ def start_bot():
             ws.send(f"PASS {TWITCH_OAUTH_TOKEN}\r\n")
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
-            print("✅ Подключено к Twitch чату!")
-            send_to_chat(ws, "🍕 Пицца-бот запущен! Пиши !пицца и получай пиццу!")
+            print("✅ Подключено!")
+            send_to_chat(ws, "🍕 Пицца-бот запущен! Пиши !пицца")
             
             while True:
                 try:
