@@ -12,7 +12,7 @@ TWITCH_OAUTH_TOKEN = "oauth:0qe7od9qwu4vtzv0t5cl38h9tezroc"
 TWITCH_CHANNEL = "#QumosX"
 
 SAVE_FILE = "pizza_data.json"
-COOLDOWN_TIME = 5  # секунд между !пицца
+COOLDOWN_TIME = 20  # секунд между !пицца
 
 print("🚀 ЗАПУСК ПИЦЦА-БОТА")
 
