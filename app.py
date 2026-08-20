@@ -11,7 +11,7 @@ TWITCH_BOT_NICKNAME = "deepseekbot"
 TWITCH_OAUTH_TOKEN = "oauth:0qe7od9qwu4vtzv0t5cl38h9tezroc"
 TWITCH_CHANNEL = "#QumosX"
 
-ADMIN_USER = "kvakish_"  # ← ТВОЙ НИК (БЕЗ @)
+ADMIN_USER = "#kvakish_"  # ← ТВОЙ НИК (БЕЗ @)
 
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
