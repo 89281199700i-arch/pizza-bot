@@ -18,9 +18,6 @@ COOLDOWN_TIME = 5
 
 print("🚀 ЗАПУСК ПИЦЦА-БОТА (С АДМИН-КОМАНДАМИ)")
 
-# ============================================================
-#  ДАННЫЕ
-# ============================================================
 def load_data():
     if os.path.exists(SAVE_FILE):
         try:
@@ -50,9 +47,6 @@ def get_player(user):
 def save_player(user):
     save_data(players)
 
-# ============================================================
-#  КОМАНДЫ
-# ============================================================
 def handle_command(user, cmd, args, ws=None):
     cmd = cmd.lower()
     player = get_player(user)
