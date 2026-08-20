@@ -132,7 +132,7 @@ def handle_command(user, cmd, args, ws=None):
         # Небольшая пауза, чтобы не флудить
         time.sleep(0.7)
         
-        # 2️⃣ Обрабатываем команду
+        # 2️⃣ Обрабатываем команду и возвращаем результат
         result = None
         
         if subcmd == "всемпицца":
@@ -214,17 +214,8 @@ def handle_command(user, cmd, args, ws=None):
         else:
             result = f"❌ @{user}, неизвестная команда. Напиши :помощь:"
         
-        # 3️⃣ ОТПРАВЛЯЕМ РЕЗУЛЬТАТ (ПРИНУДИТЕЛЬНО)
-        if result:
-            print(f"📤 2. Отправка результата: {result}")
-            send_to_chat(ws, result)
-        else:
-            # Если результат пустой — отправляем сообщение об ошибке
-            error_msg = "⚠️ Что-то пошло не так. Попробуй ещё раз."
-            print(f"⚠️ Результат пустой, отправляем ошибку: {error_msg}")
-            send_to_chat(ws, error_msg)
-        
-        return None
+        # 3️⃣ Возвращаем результат (on_message отправит его)
+        return result
     
     return None
 
@@ -252,7 +243,9 @@ def on_message(ws, msg):
                     if resp:
                         send_to_chat(ws, resp)
                 elif text.startswith(':') and text.endswith(':'):
-                    handle_command(user, text, [], ws)
+                    resp = handle_command(user, text, [], ws)
+                    if resp:
+                        send_to_chat(ws, resp)
             except Exception as e:
                 print(f"⚠️ Ошибка: {e}")
 
