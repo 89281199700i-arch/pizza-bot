@@ -110,11 +110,11 @@ def handle_command(user, cmd, args, ws=None):
 !помощь — это сообщение"""
 
     # ============================================================
-    #  АДМИН-КОМАНДЫ (ТОЛЬКО ДЛЯ ТЕБЯ)
+    #  АДМИН-КОМАНДЫ (ЧЕРЕЗ :) — ТОЛЬКО ДЛЯ ТЕБЯ
     # ============================================================
     if cmd.startswith(':') and cmd.endswith(':'):
         if user.lower() != ADMIN_USER.lower():
-            return None  # игнорируем
+            return None  # игнорируем, если не админ
         
         inner = cmd[1:-1].strip()
         if not inner:
@@ -127,6 +127,7 @@ def handle_command(user, cmd, args, ws=None):
         # Отправляем первое сообщение — "в обработке..."
         processing_msg = f"🔧 Админ-команда \"{inner}\" в обработке..."
         send_to_chat(ws, processing_msg)
+        print(f"📤 Отправлено первое сообщение: {processing_msg}")
         
         result = None
         
@@ -205,13 +206,17 @@ def handle_command(user, cmd, args, ws=None):
 :удалитьпицца <ник> <число> — удалить у игрока
 :сбросить — удалить всех игроков
 :помощь — это сообщение"""
+            print(f"📌 Результат для помощи: {result}")
         
         else:
             result = f"❌ @{user}, неизвестная команда. Напиши :помощь:"
         
         # Отправляем второе сообщение — результат
         if result:
+            print(f"📤 Отправка результата: {result}")
             send_to_chat(ws, result)
+        else:
+            print("⚠️ Результат пустой, отправка пропущена")
         
         return None  # ничего не возвращаем, так как уже отправили
     
