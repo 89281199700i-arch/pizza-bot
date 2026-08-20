@@ -16,11 +16,8 @@ ADMIN_USER = "kvakish_"
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 
-print("🚀 ЗАПУСК ПИЦЦА-БОТА (ФИНАЛЬНАЯ ВЕРСИЯ)")
+print("🚀 ЗАПУСК ПИЦЦА-БОТА (ДИАГНОСТИКА)")
 
-# ============================================================
-#  ДАННЫЕ
-# ============================================================
 def load_data():
     if os.path.exists(SAVE_FILE):
         try:
@@ -47,15 +44,20 @@ def save_player(user):
     save_data(players)
 
 # ============================================================
-#  ОТПРАВКА В ЧАТ (С ПРОВЕРКОЙ ПОДКЛЮЧЕНИЯ)
+#  ОТПРАВКА С ДИАГНОСТИКОЙ
 # ============================================================
 def send_to_chat(ws, msg):
-    if not ws or not ws.connected:
-        print("❌ WebSocket не подключён!")
+    print(f"🔍 send_to_chat вызвана с сообщением: {msg[:50]}...")
+    if not ws:
+        print("❌ ws = None")
         return False
     try:
+        print(f"🔍 ws.connected = {ws.connected}")
+        if not ws.connected:
+            print("❌ WebSocket не подключён!")
+            return False
         ws.send(f"PRIVMSG {TWITCH_CHANNEL} :{msg}\r\n")
-        print(f"📤 Отправлено в чат: {msg}")
+        print(f"📤 Отправлено: {msg}")
         return True
     except Exception as e:
         print(f"❌ Ошибка отправки: {e}")
@@ -69,7 +71,7 @@ def handle_command(user, cmd, args, ws=None):
     player = get_player(user)
     now = time.time()
 
-    # --- ОБЫЧНЫЕ КОМАНДЫ (!) ---
+    # --- ОБЫЧНЫЕ КОМАНДЫ ---
     if cmd == "!пицца":
         if user in cooldowns and now - cooldowns[user] < COOLDOWN_TIME:
             remaining = int(COOLDOWN_TIME - (now - cooldowns[user]))
@@ -110,10 +112,12 @@ def handle_command(user, cmd, args, ws=None):
 !помощь — это сообщение"""
 
     # ============================================================
-    #  АДМИН-КОМАНДЫ (ЧЕРЕЗ :) — ТОЛЬКО ДЛЯ ТЕБЯ
+    #  АДМИН-КОМАНДЫ
     # ============================================================
     if cmd.startswith(':') and cmd.endswith(':'):
+        print(f"🔍 Обнаружена админ-команда от {user}")
         if user.lower() != ADMIN_USER.lower():
+            print(f"❌ Не админ: {user} != {ADMIN_USER}")
             return None
         
         inner = cmd[1:-1].strip()
@@ -126,13 +130,12 @@ def handle_command(user, cmd, args, ws=None):
         
         # 1️⃣ Отправляем "в обработке..."
         processing_msg = f"🔧 Админ-команда \"{inner}\" в обработке..."
+        print(f"📤 1. Отправка: {processing_msg}")
         send_to_chat(ws, processing_msg)
-        print(f"📤 1. Отправлено: {processing_msg}")
         
-        # Небольшая пауза, чтобы не флудить
-        time.sleep(0.7)
+        time.sleep(0.5)
         
-        # 2️⃣ Обрабатываем команду и возвращаем результат
+        # 2️⃣ Обрабатываем команду
         result = None
         
         if subcmd == "всемпицца":
@@ -209,13 +212,19 @@ def handle_command(user, cmd, args, ws=None):
 :удалитьпицца <ник> <число> — удалить у игрока
 :сбросить — удалить всех игроков
 :помощь — это сообщение"""
-            print(f"📌 Результат для помощи: {result}")
+            print(f"📌 Результат помощи: {result}")
         
         else:
             result = f"❌ @{user}, неизвестная команда. Напиши :помощь:"
         
-        # 3️⃣ Возвращаем результат (on_message отправит его)
-        return result
+        # 3️⃣ ОТПРАВЛЯЕМ РЕЗУЛЬТАТ
+        print(f"📤 2. Попытка отправить результат: {result}")
+        if result:
+            send_to_chat(ws, result)
+        else:
+            send_to_chat(ws, "⚠️ Что-то пошло не так. Попробуй ещё раз.")
+        
+        return None
     
     return None
 
@@ -243,9 +252,7 @@ def on_message(ws, msg):
                     if resp:
                         send_to_chat(ws, resp)
                 elif text.startswith(':') and text.endswith(':'):
-                    resp = handle_command(user, text, [], ws)
-                    if resp:
-                        send_to_chat(ws, resp)
+                    handle_command(user, text, [], ws)
             except Exception as e:
                 print(f"⚠️ Ошибка: {e}")
 
