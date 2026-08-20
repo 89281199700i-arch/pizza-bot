@@ -14,17 +14,14 @@ TWITCH_OAUTH_TOKEN = "oauth:0qe7od9qwu4vtzv0t5cl38h9tezroc"
 TWITCH_CHANNEL = "#QumosX"
 
 ADMIN_USER = "kvakish_"
-ADMIN_CODE = "9760ef6e-8418-45c9-89d4-118745b9f413"      # ← ТВОЙ ПЕРВЫЙ КОД
-SECRET_CODE = "чекушка"     # ← ТВОЙ ВТОРОЙ КОД
+ADMIN_CODE = "9760ef6e-8418-45c9-89d4-118745b9f413"
+SECRET_CODE = "чекушка"
 
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 
 print("🚀 ЗАПУСК ПИЦЦА-БОТА С АДМИН-ПАНЕЛЬЮ")
 
-# ============================================================
-#  ДАННЫЕ
-# ============================================================
 def load_data():
     if os.path.exists(SAVE_FILE):
         try:
@@ -84,7 +81,6 @@ HTML = """
     <div class="container">
         <h1>🍕 Админ-панель</h1>
         
-        <!-- Вход по кодам -->
         <div id="login" class="card">
             <h2>🔐 Вход</h2>
             <p>Введи оба кода для доступа</p>
@@ -94,7 +90,6 @@ HTML = """
             <p id="loginError" style="color:#da3633;"></p>
         </div>
 
-        <!-- Панель управления -->
         <div id="panel" class="hidden">
             <div class="card">
                 <h2>📊 Статистика</h2>
@@ -261,7 +256,8 @@ def reset_all():
     return {'ok': True, 'message': '✅ Все данные сброшены'}
 
 def start_web():
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
 
 # ============================================================
 #  БОТ
@@ -349,7 +345,6 @@ def start_bot():
         time.sleep(5)
 
 if __name__ == "__main__":
-    # Запускаем веб-сервер в фоновом потоке
     web_thread = threading.Thread(target=start_web, daemon=True)
     web_thread.start()
     print("🌐 Админ-панель: http://localhost:5000")
