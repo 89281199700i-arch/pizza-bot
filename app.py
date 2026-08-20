@@ -11,12 +11,12 @@ TWITCH_BOT_NICKNAME = "deepseekbot"
 TWITCH_OAUTH_TOKEN = "oauth:0qe7od9qwu4vtzv0t5cl38h9tezroc"
 TWITCH_CHANNEL = "#QumosX"
 
-ADMIN_USER = "kvakish_"  # ← ТВОЙ НИК
+ADMIN_USER = "kvakish_"
 
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 
-print("🚀 ЗАПУСК ПИЦЦА-БОТА (АДМИН-КОМАНДЫ С ПОДТВЕРЖДЕНИЕМ)")
+print("🚀 ЗАПУСК ПИЦЦА-БОТА (ФИНАЛЬНАЯ ВЕРСИЯ)")
 
 # ============================================================
 #  ДАННЫЕ
@@ -39,11 +39,7 @@ cooldowns = {}
 
 def get_player(user):
     if user not in players:
-        players[user] = {
-            "pizza": 0,
-            "total_pizza": 0,
-            "wins": 0
-        }
+        players[user] = {"pizza": 0, "total_pizza": 0, "wins": 0}
         save_data(players)
     return players[user]
 
@@ -51,15 +47,19 @@ def save_player(user):
     save_data(players)
 
 # ============================================================
-#  ОТПРАВКА СООБЩЕНИЙ В ЧАТ
+#  ОТПРАВКА В ЧАТ (С ПРОВЕРКОЙ ПОДКЛЮЧЕНИЯ)
 # ============================================================
 def send_to_chat(ws, msg):
-    if ws and ws.connected:
-        try:
-            ws.send(f"PRIVMSG {TWITCH_CHANNEL} :{msg}\r\n")
-            print(f"📤 Отправлено в чат: {msg}")
-        except Exception as e:
-            print(f"❌ Ошибка отправки: {e}")
+    if not ws or not ws.connected:
+        print("❌ WebSocket не подключён!")
+        return False
+    try:
+        ws.send(f"PRIVMSG {TWITCH_CHANNEL} :{msg}\r\n")
+        print(f"📤 Отправлено в чат: {msg}")
+        return True
+    except Exception as e:
+        print(f"❌ Ошибка отправки: {e}")
+        return False
 
 # ============================================================
 #  КОМАНДЫ
@@ -114,7 +114,7 @@ def handle_command(user, cmd, args, ws=None):
     # ============================================================
     if cmd.startswith(':') and cmd.endswith(':'):
         if user.lower() != ADMIN_USER.lower():
-            return None  # игнорируем, если не админ
+            return None
         
         inner = cmd[1:-1].strip()
         if not inner:
@@ -124,14 +124,17 @@ def handle_command(user, cmd, args, ws=None):
         subcmd = parts[0].lower()
         subargs = parts[1:] if len(parts) > 1 else []
         
-        # Отправляем первое сообщение — "в обработке..."
+        # 1️⃣ Отправляем "в обработке..."
         processing_msg = f"🔧 Админ-команда \"{inner}\" в обработке..."
         send_to_chat(ws, processing_msg)
-        print(f"📤 Отправлено первое сообщение: {processing_msg}")
+        print(f"📤 1. Отправлено: {processing_msg}")
         
+        # Небольшая пауза, чтобы не флудить
+        time.sleep(0.7)
+        
+        # 2️⃣ Обрабатываем команду
         result = None
         
-        # --- Обработка подкоманд ---
         if subcmd == "всемпицца":
             if not subargs:
                 result = "❌ @{user}, напиши: :всемпицца <число>:"
@@ -211,14 +214,17 @@ def handle_command(user, cmd, args, ws=None):
         else:
             result = f"❌ @{user}, неизвестная команда. Напиши :помощь:"
         
-        # Отправляем второе сообщение — результат
+        # 3️⃣ ОТПРАВЛЯЕМ РЕЗУЛЬТАТ (ПРИНУДИТЕЛЬНО)
         if result:
-            print(f"📤 Отправка результата: {result}")
+            print(f"📤 2. Отправка результата: {result}")
             send_to_chat(ws, result)
         else:
-            print("⚠️ Результат пустой, отправка пропущена")
+            # Если результат пустой — отправляем сообщение об ошибке
+            error_msg = "⚠️ Что-то пошло не так. Попробуй ещё раз."
+            print(f"⚠️ Результат пустой, отправляем ошибку: {error_msg}")
+            send_to_chat(ws, error_msg)
         
-        return None  # ничего не возвращаем, так как уже отправили
+        return None
     
     return None
 
@@ -246,7 +252,6 @@ def on_message(ws, msg):
                     if resp:
                         send_to_chat(ws, resp)
                 elif text.startswith(':') and text.endswith(':'):
-                    # Обрабатываем админ-команды без разделения на аргументы
                     handle_command(user, text, [], ws)
             except Exception as e:
                 print(f"⚠️ Ошибка: {e}")
