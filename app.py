@@ -164,7 +164,7 @@ def handle_command(user, cmd, args, ws=None):
         return f"🍕 @{user}, ты съел пиццу! Осталось: {player['pizza']}"
     
     # --- МАГАЗИН БУСТОВ ---
-    elif cmd == "!магазин" or cmd == "!бусты":
+    elif cmd == ";магазин" or cmd == "!бусты":
         boost_list = []
         for key, boost in BOOSTS.items():
             boost_list.append(f"{key}: {boost['name']} — {boost['price']} 🍕 ({boost['description']})")
