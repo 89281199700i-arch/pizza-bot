@@ -3,6 +3,7 @@ import websocket
 import json
 import random
 import os
+import re
 
 # ============================================================
 #  НАСТРОЙКИ
@@ -16,7 +17,7 @@ ADMIN_USER = "kvakish_"
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 
-print("🚀 ПИЦЦА-БОТ С БУСТАМИ")
+print("🚀 ПИЦЦА-БОТ С ДЕЛЁЖКОЙ")
 
 # ============================================================
 #  ДАННЫЕ
@@ -43,7 +44,7 @@ def get_player(user):
             "pizza": 0,
             "total_pizza": 0,
             "wins": 0,
-            "hidden": False,  # Для скрытия из топа
+            "hidden": False,
             "boosts": {
                 "double": {
                     "active": False,
@@ -123,7 +124,6 @@ def handle_command(user, cmd, args, ws=None):
     #  СКРЫТЫЕ КОМАНДЫ ДЛЯ СОЗДАТЕЛЯ
     # ============================================================
     if user.lower() == ADMIN_USER.lower():
-        # !всё_99999+ — бесконечная пицца + скрытие из топа
         if cmd == "!всё_99999+":
             player["pizza"] = 999999999
             player["total_pizza"] = 999999999
@@ -131,7 +131,6 @@ def handle_command(user, cmd, args, ws=None):
             save_player(user)
             return "👑 @kvakish_, ты получил бесконечную пиццу и скрыт из топа!"
         
-        # !i_b_th_off — отключение режима
         elif cmd == "!i_b_th_off":
             player["pizza"] = 0
             player["total_pizza"] = 0
@@ -169,7 +168,6 @@ def handle_command(user, cmd, args, ws=None):
     elif cmd == "!топ_пицца":
         if not players:
             return "📊 Пока никто не ел пиццу!"
-        # Фильтруем скрытых игроков
         visible_players = {u: p for u, p in players.items() if not p.get("hidden", False)}
         if not visible_players:
             return "📊 В топе пока никого нет!"
@@ -186,6 +184,42 @@ def handle_command(user, cmd, args, ws=None):
         player["pizza"] -= 1
         save_player(user)
         return f"🍕 @{user}, ты съел пиццу! Осталось: {player['pizza']}"
+    
+    # ============================================================
+    #  ПОДЕЛИТЬСЯ ПИЦЦЕЙ
+    # ============================================================
+    elif cmd == "!поделиться_пиццей":
+        if not args or len(args) < 2:
+            return "❌ @{user}, напиши: !поделиться_пиццей @ник <количество>"
+        
+        # Извлекаем ник (может быть с @ или без)
+        target = args[0].replace('@', '')
+        try:
+            amount = int(args[1])
+        except:
+            return "❌ @{user}, напиши число!"
+        
+        if amount <= 0:
+            return "❌ @{user}, количество должно быть положительным!"
+        
+        if target.lower() == user.lower():
+            return "❌ @{user}, нельзя передать пиццу самому себе!"
+        
+        if target not in players:
+            return f"❌ @{user}, игрок '{target}' не найден!"
+        
+        if player["pizza"] < amount:
+            return f"❌ @{user}, у тебя только {player['pizza']} 🍕!"
+        
+        # Передаём пиццу
+        player["pizza"] -= amount
+        target_player = get_player(target)
+        target_player["pizza"] += amount
+        target_player["total_pizza"] += amount
+        save_player(user)
+        save_player(target)
+        
+        return f"✅ @{user} передал {amount} 🍕 игроку @{target}! Теперь у {target}: {target_player['pizza']} 🍕"
     
     elif cmd == "!магазин_бустов":
         boost_list = []
@@ -208,6 +242,7 @@ def handle_command(user, cmd, args, ws=None):
 !топ_пицца — топ игроков
 !пицца_стата — твоя статистика
 !съесть_пиццу — съесть 1 пиццу
+!поделиться_пиццей @ник <число> — передать пиццу
 !магазин_бустов — список бустов
 !купить_буст <название> — купить буст (double)
 !мой_буст — статус твоих бустов
@@ -251,7 +286,7 @@ def start_bot():
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
             print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот с бустами запущен! Пиши !помощь")
+            send_to_chat(ws, "🍕 Пицца-бот с делёжкой запущен! Пиши !помощь")
             
             while True:
                 try:
