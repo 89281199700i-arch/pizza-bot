@@ -16,7 +16,7 @@ ADMIN_USER = "kvakish_"
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 
-print("🚀 ПИЦЦА-БОТ С ИВЕНТАМИ (РУЧНОЙ ЗАПУСК)")
+print("🚀 ПИЦЦА-БОТ С ИВЕНТАМИ (ИСПРАВЛЕННЫЙ)")
 
 # ============================================================
 #  ДАННЫЕ
@@ -37,6 +37,9 @@ def save_data(data):
 players = load_data()
 cooldowns = {}
 
+# ============================================================
+#  ИВЕНТ
+# ============================================================
 event_active = False
 event_answer = []
 event_ingredients = [
@@ -148,7 +151,8 @@ def generate_event():
     return "✅ Ивент запущен!"
 
 def check_event_guess(user, guess):
-    global event_active, event_ws
+    global event_active, event_answer, event_ws
+    
     if not event_active:
         return "📢 Сейчас нет активного ивента! Напиши !запустить_ивент (только для создателя)"
     
@@ -160,6 +164,7 @@ def check_event_guess(user, guess):
         if g not in event_ingredients:
             return f"❌ Ингредиент '{g}' не найден! Используй названия из списка."
     
+    # Сравниваем
     if set(guess) == set(event_answer):
         # Победитель!
         event_active = False
