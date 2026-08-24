@@ -16,7 +16,7 @@ ADMIN_USER = "kvakish_"
 
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
-EVENT_TIMEOUT = 60  # 1 минута
+EVENT_TIMEOUT = 180 # 1 минута
 
 print("🚀 ПИЦЦА-БОТ С ИВЕНТАМИ (ИСПРАВЛЕННЫЙ)")
 
@@ -169,7 +169,7 @@ def generate_event():
 Доступные ингредиенты: {' | '.join(ingredient_list)}
 Напиши: !рецепт <ингредиент1> <ингредиент2> <ингредиент3> <ингредиент4>
 Победитель получит 20 🍕 и БЕСПЛАТНЫЙ БУСТ!
-⏰ У тебя есть 1 минута!"""
+⏰ У тебя есть 3 минуты! """
     
     send_to_chat(event_ws, msg)
     print(f"🎉 Ивент запущен! Ответ: {event_answer}")
