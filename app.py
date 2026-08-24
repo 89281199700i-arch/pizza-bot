@@ -3,6 +3,7 @@ import websocket
 import json
 import random
 import os
+import threading
 
 # ============================================================
 #  НАСТРОЙКИ
@@ -15,6 +16,7 @@ ADMIN_USER = "kvakish_"
 
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
+EVENT_TIMEOUT = 60  # 1 минута
 
 print("🚀 ПИЦЦА-БОТ С ИВЕНТАМИ (ИСПРАВЛЕННЫЙ)")
 
@@ -42,11 +44,12 @@ cooldowns = {}
 # ============================================================
 event_active = False
 event_answer = []
+event_timer = None
 event_ingredients = [
-    "🍅 Томатный соус", "🧀 Моцарелла", "🍕 Тесто", "🌿 Орегано", 
-    "🥓 Пепперони", "🧅 Лук", "🫑 Перец", "🍄 Грибы", 
-    "🫒 Оливки", "🌶️ Халапеньо", "🧄 Чеснок", "🥩 Ветчина", 
-    "🍍 Ананас", "🐟 Анчоусы", "🫘 Фасоль"
+    "Томатный соус", "Моцарелла", "Тесто", "Орегано", 
+    "Пепперони", "Лук", "Перец", "Грибы", 
+    "Оливки", "Халапеньо", "Чеснок", "Ветчина", 
+    "Ананас", "Анчоусы", "Фасоль"
 ]
 event_ws = None
 
@@ -124,34 +127,62 @@ def get_boost_status(user):
 # ============================================================
 #  ИВЕНТ "ПРОФЕССИОНАЛ ПО ПИЦЦЕ"
 # ============================================================
+def stop_event():
+    global event_active, event_timer
+    if event_active:
+        event_active = False
+        event_timer = None
+        send_to_chat(event_ws, "⏰ Время вышло! Ивент завершён. Никто не угадал рецепт.")
+        print("⏰ Ивент завершён по таймеру")
+
 def generate_event():
-    global event_active, event_answer, event_ws
+    global event_active, event_answer, event_ws, event_timer
+    
     if not event_ws:
         return "❌ WebSocket не подключён!"
     
     if event_active:
         return "⚠️ Ивент уже активен! Дождись окончания."
     
-    # Генерируем 4 ингредиента
+    # Генерируем 4 ингредиента (без эмодзи)
     event_answer = random.sample(event_ingredients, 4)
     event_active = True
     
-    # Показываем все ингредиенты (смешанные)
+    # Показываем все ингредиенты с эмодзи
+    emoji_map = {
+        "Томатный соус": "🍅", "Моцарелла": "🧀", "Тесто": "🍕", "Орегано": "🌿",
+        "Пепперони": "🥓", "Лук": "🧅", "Перец": "🫑", "Грибы": "🍄",
+        "Оливки": "🫒", "Халапеньо": "🌶️", "Чеснок": "🧄", "Ветчина": "🥩",
+        "Ананас": "🍍", "Анчоусы": "🐟", "Фасоль": "🫘"
+    }
+    
     all_ingredients = event_ingredients.copy()
     random.shuffle(all_ingredients)
     
+    # Формируем список с эмодзи
+    ingredient_list = []
+    for ing in all_ingredients[:8]:
+        ingredient_list.append(f"{emoji_map.get(ing, '')} {ing}")
+    
     msg = f"""🍕 **ПРОФЕССИОНАЛ ПО ПИЦЦЕ!** 🍕
 Кто соберёт идеальный рецепт из 4 ингредиентов?
-Доступные ингредиенты: {' | '.join(all_ingredients[:8])}
+Доступные ингредиенты: {' | '.join(ingredient_list)}
 Напиши: !рецепт <ингредиент1> <ингредиент2> <ингредиент3> <ингредиент4>
-Победитель получит 20 🍕 и БЕСПЛАТНЫЙ БУСТ!"""
+Победитель получит 20 🍕 и БЕСПЛАТНЫЙ БУСТ!
+⏰ У тебя есть 1 минута!"""
     
     send_to_chat(event_ws, msg)
     print(f"🎉 Ивент запущен! Ответ: {event_answer}")
-    return "✅ Ивент запущен!"
+    
+    # Запускаем таймер
+    event_timer = threading.Timer(EVENT_TIMEOUT, stop_event)
+    event_timer.daemon = True
+    event_timer.start()
+    
+    return "✅ Ивент запущен на 1 минуту!"
 
 def check_event_guess(user, guess):
-    global event_active, event_answer, event_ws
+    global event_active, event_answer, event_ws, event_timer
     
     if not event_active:
         return "📢 Сейчас нет активного ивента! Напиши !запустить_ивент (только для создателя)"
@@ -159,15 +190,22 @@ def check_event_guess(user, guess):
     if len(guess) != 4:
         return "❌ Напиши ровно 4 ингредиента! Например: !рецепт Тесто Сыр Соус Грибы"
     
-    # Проверяем, все ли ингредиенты есть в списке
+    # Проверяем каждый ингредиент
     for g in guess:
         if g not in event_ingredients:
             return f"❌ Ингредиент '{g}' не найден! Используй названия из списка."
     
-    # Сравниваем
-    if set(guess) == set(event_answer):
+    # Сравниваем (игнорируем регистр)
+    guess_lower = [g.lower() for g in guess]
+    answer_lower = [a.lower() for a in event_answer]
+    
+    if set(guess_lower) == set(answer_lower):
         # Победитель!
         event_active = False
+        if event_timer:
+            event_timer.cancel()
+            event_timer = None
+        
         player = get_player(user)
         player["pizza"] += 20
         player["total_pizza"] += 20
@@ -180,8 +218,17 @@ def check_event_guess(user, guess):
         
         save_player(user)
         
+        emoji_map = {
+            "Томатный соус": "🍅", "Моцарелла": "🧀", "Тесто": "🍕", "Орегано": "🌿",
+            "Пепперони": "🥓", "Лук": "🧅", "Перец": "🫑", "Грибы": "🍄",
+            "Оливки": "🫒", "Халапеньо": "🌶️", "Чеснок": "🧄", "Ветчина": "🥩",
+            "Ананас": "🍍", "Анчоусы": "🐟", "Фасоль": "🫘"
+        }
+        
+        answer_display = [f"{emoji_map.get(a, '')} {a}" for a in event_answer]
+        
         msg = f"""🎉 **@{user} угадал идеальный рецепт!** 🎉
-Правильные ингредиенты: {' | '.join(event_answer)}
+Правильные ингредиенты: {' | '.join(answer_display)}
 @{user} получает 20 🍕 и БЕСПЛАТНЫЙ БУСТ Удвоения! 🎁
 Всего побед в ивентах: {player['event_wins']}"""
         
@@ -189,7 +236,7 @@ def check_event_guess(user, guess):
         return None
     
     # Подсказка: сколько угадал
-    correct = len(set(guess) & set(event_answer))
+    correct = len(set(guess_lower) & set(answer_lower))
     if correct == 0:
         return "❌ Ни одного правильного ингредиента! Попробуй ещё."
     elif correct == 1:
@@ -200,6 +247,19 @@ def check_event_guess(user, guess):
         return "🔥 Ты угадал 3 ингредиента! Остался последний!"
     
     return None
+
+def force_stop_event():
+    global event_active, event_timer
+    if not event_active:
+        return "⚠️ Ивент не активен!"
+    
+    event_active = False
+    if event_timer:
+        event_timer.cancel()
+        event_timer = None
+    
+    send_to_chat(event_ws, "🛑 Ивент остановлен создателем!")
+    return "✅ Ивент остановлен!"
 
 # ============================================================
 #  КОМАНДЫ
@@ -233,6 +293,9 @@ def handle_command(user, cmd, args, ws=None):
         
         elif cmd == "!запустить_ивент":
             return generate_event()
+        
+        elif cmd == "!стоп_ивент":
+            return force_stop_event()
 
     # ============================================================
     #  ОБЫЧНЫЕ КОМАНДЫ
@@ -314,8 +377,11 @@ def handle_command(user, cmd, args, ws=None):
     
     elif cmd == "!рецепт":
         if not args or len(args) < 4:
-            return "❌ @{user}, напиши 4 ингредиента: !рецепт Тесто Сыр Соус Грибы"
-        result = check_event_guess(user, args)
+            return "❌ @{user}, напиши 4 ингредиента через пробел"
+        
+        # Собираем все аргументы как один список ингредиентов
+        guess = args[:4]  # берём первые 4 слова
+        result = check_event_guess(user, guess)
         return result
     
     elif cmd == "!магазин_бустов":
