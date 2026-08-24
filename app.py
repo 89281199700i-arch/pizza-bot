@@ -3,7 +3,6 @@ import websocket
 import json
 import random
 import os
-import re
 
 # ============================================================
 #  НАСТРОЙКИ
@@ -17,7 +16,7 @@ ADMIN_USER = "kvakish_"
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 
-print("🚀 ПИЦЦА-БОТ С ДЕЛЁЖКОЙ")
+print("🚀 ПИЦЦА-БОТ С ИВЕНТАМИ (РУЧНОЙ ЗАПУСК)")
 
 # ============================================================
 #  ДАННЫЕ
@@ -38,6 +37,16 @@ def save_data(data):
 players = load_data()
 cooldowns = {}
 
+event_active = False
+event_answer = []
+event_ingredients = [
+    "🍅 Томатный соус", "🧀 Моцарелла", "🍕 Тесто", "🌿 Орегано", 
+    "🥓 Пепперони", "🧅 Лук", "🫑 Перец", "🍄 Грибы", 
+    "🫒 Оливки", "🌶️ Халапеньо", "🧄 Чеснок", "🥩 Ветчина", 
+    "🍍 Ананас", "🐟 Анчоусы", "🫘 Фасоль"
+]
+event_ws = None
+
 def get_player(user):
     if user not in players:
         players[user] = {
@@ -45,12 +54,9 @@ def get_player(user):
             "total_pizza": 0,
             "wins": 0,
             "hidden": False,
+            "event_wins": 0,
             "boosts": {
-                "double": {
-                    "active": False,
-                    "uses_left": 0,
-                    "max_uses": 4
-                }
+                "double": {"active": False, "uses_left": 0, "max_uses": 4}
             }
         }
         save_data(players)
@@ -71,7 +77,7 @@ def send_to_chat(ws, msg):
             print(f"❌ Ошибка: {e}")
 
 # ============================================================
-#  МАГАЗИН БУСТОВ
+#  БУСТЫ
 # ============================================================
 BOOSTS = {
     "double": {
@@ -113,9 +119,91 @@ def get_boost_status(user):
     return " | ".join(status) if status else "Нет активных бустов"
 
 # ============================================================
+#  ИВЕНТ "ПРОФЕССИОНАЛ ПО ПИЦЦЕ"
+# ============================================================
+def generate_event():
+    global event_active, event_answer, event_ws
+    if not event_ws:
+        return "❌ WebSocket не подключён!"
+    
+    if event_active:
+        return "⚠️ Ивент уже активен! Дождись окончания."
+    
+    # Генерируем 4 ингредиента
+    event_answer = random.sample(event_ingredients, 4)
+    event_active = True
+    
+    # Показываем все ингредиенты (смешанные)
+    all_ingredients = event_ingredients.copy()
+    random.shuffle(all_ingredients)
+    
+    msg = f"""🍕 **ПРОФЕССИОНАЛ ПО ПИЦЦЕ!** 🍕
+Кто соберёт идеальный рецепт из 4 ингредиентов?
+Доступные ингредиенты: {' | '.join(all_ingredients[:8])}
+Напиши: !рецепт <ингредиент1> <ингредиент2> <ингредиент3> <ингредиент4>
+Победитель получит 20 🍕 и БЕСПЛАТНЫЙ БУСТ!"""
+    
+    send_to_chat(event_ws, msg)
+    print(f"🎉 Ивент запущен! Ответ: {event_answer}")
+    return "✅ Ивент запущен!"
+
+def check_event_guess(user, guess):
+    global event_active, event_ws
+    if not event_active:
+        return "📢 Сейчас нет активного ивента! Напиши !запустить_ивент (только для создателя)"
+    
+    if len(guess) != 4:
+        return "❌ Напиши ровно 4 ингредиента! Например: !рецепт Тесто Сыр Соус Грибы"
+    
+    # Проверяем, все ли ингредиенты есть в списке
+    for g in guess:
+        if g not in event_ingredients:
+            return f"❌ Ингредиент '{g}' не найден! Используй названия из списка."
+    
+    if set(guess) == set(event_answer):
+        # Победитель!
+        event_active = False
+        player = get_player(user)
+        player["pizza"] += 20
+        player["total_pizza"] += 20
+        player["event_wins"] += 1
+        
+        # Бесплатный буст
+        if "double" in player["boosts"]:
+            player["boosts"]["double"]["active"] = True
+            player["boosts"]["double"]["uses_left"] = 4
+        
+        save_player(user)
+        
+        msg = f"""🎉 **@{user} угадал идеальный рецепт!** 🎉
+Правильные ингредиенты: {' | '.join(event_answer)}
+@{user} получает 20 🍕 и БЕСПЛАТНЫЙ БУСТ Удвоения! 🎁
+Всего побед в ивентах: {player['event_wins']}"""
+        
+        send_to_chat(event_ws, msg)
+        return None
+    
+    # Подсказка: сколько угадал
+    correct = len(set(guess) & set(event_answer))
+    if correct == 0:
+        return "❌ Ни одного правильного ингредиента! Попробуй ещё."
+    elif correct == 1:
+        return "🤔 Ты угадал 1 ингредиент! Попробуй ещё."
+    elif correct == 2:
+        return "🤔 Ты угадал 2 ингредиента! Ты близок!"
+    elif correct == 3:
+        return "🔥 Ты угадал 3 ингредиента! Остался последний!"
+    
+    return None
+
+# ============================================================
 #  КОМАНДЫ
 # ============================================================
 def handle_command(user, cmd, args, ws=None):
+    global event_ws
+    if ws:
+        event_ws = ws
+    
     cmd = cmd.lower()
     player = get_player(user)
     now = time.time()
@@ -137,6 +225,9 @@ def handle_command(user, cmd, args, ws=None):
             player["hidden"] = False
             save_player(user)
             return "👑 @kvakish_, режим бесконечности отключён! Ты снова в топе."
+        
+        elif cmd == "!запустить_ивент":
+            return generate_event()
 
     # ============================================================
     #  ОБЫЧНЫЕ КОМАНДЫ
@@ -176,7 +267,7 @@ def handle_command(user, cmd, args, ws=None):
     
     elif cmd == "!пицца_стата":
         hidden_status = " (скрыт из топа)" if player.get("hidden", False) else ""
-        return f"📊 @{user}, у тебя {player['pizza']} 🍕 | Всего: {player['total_pizza']}{hidden_status}"
+        return f"📊 @{user}, у тебя {player['pizza']} 🍕 | Всего: {player['total_pizza']}{hidden_status} | Ивентов выиграно: {player['event_wins']}"
     
     elif cmd == "!съесть_пиццу":
         if player["pizza"] <= 0:
@@ -185,14 +276,10 @@ def handle_command(user, cmd, args, ws=None):
         save_player(user)
         return f"🍕 @{user}, ты съел пиццу! Осталось: {player['pizza']}"
     
-    # ============================================================
-    #  ПОДЕЛИТЬСЯ ПИЦЦЕЙ
-    # ============================================================
     elif cmd == "!поделиться_пиццей":
         if not args or len(args) < 2:
             return "❌ @{user}, напиши: !поделиться_пиццей @ник <количество>"
         
-        # Извлекаем ник (может быть с @ или без)
         target = args[0].replace('@', '')
         try:
             amount = int(args[1])
@@ -211,7 +298,6 @@ def handle_command(user, cmd, args, ws=None):
         if player["pizza"] < amount:
             return f"❌ @{user}, у тебя только {player['pizza']} 🍕!"
         
-        # Передаём пиццу
         player["pizza"] -= amount
         target_player = get_player(target)
         target_player["pizza"] += amount
@@ -220,6 +306,12 @@ def handle_command(user, cmd, args, ws=None):
         save_player(target)
         
         return f"✅ @{user} передал {amount} 🍕 игроку @{target}! Теперь у {target}: {target_player['pizza']} 🍕"
+    
+    elif cmd == "!рецепт":
+        if not args or len(args) < 4:
+            return "❌ @{user}, напиши 4 ингредиента: !рецепт Тесто Сыр Соус Грибы"
+        result = check_event_guess(user, args)
+        return result
     
     elif cmd == "!магазин_бустов":
         boost_list = []
@@ -246,6 +338,7 @@ def handle_command(user, cmd, args, ws=None):
 !магазин_бустов — список бустов
 !купить_буст <название> — купить буст (double)
 !мой_буст — статус твоих бустов
+!рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
 !помощь — это сообщение"""
     
     return None
@@ -254,6 +347,10 @@ def handle_command(user, cmd, args, ws=None):
 #  WEBSOCKET
 # ============================================================
 def on_message(ws, msg):
+    global event_ws
+    if not event_ws:
+        event_ws = ws
+    
     for line in msg.split('\r\n'):
         if not line:
             continue
@@ -286,7 +383,7 @@ def start_bot():
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
             print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот с делёжкой запущен! Пиши !помощь")
+            send_to_chat(ws, "🍕 Пицца-бот с ивентами запущен! Пиши !помощь")
             
             while True:
                 try:
