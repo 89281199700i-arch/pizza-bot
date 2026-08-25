@@ -7,7 +7,7 @@ import threading
 
 # ============================================================
 #  НАСТРОЙКИ
-# ============================================================
+#т ============================================================
 TWITCH_BOT_NICKNAME = "deepseekbot"
 TWITCH_OAUTH_TOKEN = "oauth:0qe7od9qwu4vtzv0t5cl38h9tezroc"
 TWITCH_CHANNEL = "#QumosX"
