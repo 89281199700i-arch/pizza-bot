@@ -18,7 +18,7 @@ SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 EVENT_TIMEOUT = 60
 
-print("🚀 ПИЦЦА-БОТ С ДУЭЛЯМИ")
+print("🚀 ПИЦЦА-БОТ С ШАНСОМ")
 
 # ============================================================
 #  ДАННЫЕ
@@ -42,7 +42,7 @@ cooldowns = {}
 # ============================================================
 #  ДУЭЛИ
 # ============================================================
-duels = {}  # { challenger: {"target": target, "status": "waiting"} }
+duels = {}
 
 # ============================================================
 #  ИВЕНТ
@@ -280,7 +280,6 @@ def start_duel(challenger, target, ws):
     msg = f"⚔️ @{challenger} вызывает @{target} на ДУЭЛЬ! 🍕\nУ кого выпадет больше пиццы за 1 минуту — тот забирает всё!\n@{target}, напиши !принять_дуэль или !отказаться_дуэль"
     send_to_chat(ws, msg)
     
-    # Таймер на принятие (30 секунд)
     def duel_timeout():
         if challenger in duels and duels[challenger]["status"] == "waiting":
             del duels[challenger]
@@ -293,7 +292,6 @@ def start_duel(challenger, target, ws):
     return None
 
 def accept_duel(user, ws):
-    # Находим, кто вызвал этого пользователя
     challenger = None
     for c, data in duels.items():
         if data["target"] == user and data["status"] == "waiting":
@@ -303,11 +301,8 @@ def accept_duel(user, ws):
     if not challenger:
         return f"❌ @{user}, у тебя нет активных вызовов на дуэль!"
     
-    # Начинаем дуэль
     duels[challenger]["status"] = "active"
     duels[challenger]["start_time"] = time.time()
-    
-    # Даём каждому по 5 попыток !пицца
     duels[challenger]["attempts"] = {challenger: 0, user: 0}
     duels[challenger]["pizza_got"] = {challenger: 0, user: 0}
     
@@ -330,7 +325,6 @@ def decline_duel(user, ws):
     return None
 
 def duel_pizza(user, ws):
-    # Проверяем, есть ли у пользователя активная дуэль
     active_duel = None
     for c, data in duels.items():
         if data["status"] == "active":
@@ -339,7 +333,7 @@ def duel_pizza(user, ws):
                 break
     
     if not active_duel:
-        return None  # Не обрабатываем, это обычная !пицца
+        return None
     
     challenger, data = active_duel
     target = data["target"]
@@ -347,7 +341,6 @@ def duel_pizza(user, ws):
     if data["attempts"][user] >= 5:
         return f"⏳ @{user}, у тебя закончились попытки в дуэли!"
     
-    # Генерируем пиццу для дуэли (1-6, без бустов)
     pizza = random.randint(1, 6)
     data["pizza_got"][user] += pizza
     data["attempts"][user] += 1
@@ -355,9 +348,7 @@ def duel_pizza(user, ws):
     msg = f"🍕 @{user} получает {pizza} пиццы в дуэли! (Попытка {data['attempts'][user]}/5)"
     send_to_chat(ws, msg)
     
-    # Проверяем, закончили ли оба
     if data["attempts"][challenger] >= 5 and data["attempts"][target] >= 5:
-        # Определяем победителя
         c_pizza = data["pizza_got"][challenger]
         t_pizza = data["pizza_got"][target]
         
@@ -370,7 +361,6 @@ def duel_pizza(user, ws):
             loser = challenger
             win_amount = c_pizza + t_pizza
         else:
-            # Ничья
             send_to_chat(ws, f"🤝 ДУЭЛЬ ЗАВЕРШЕНА! Ничья! Оба игрока получают по 5 🍕")
             winner_player = get_player(challenger)
             winner_player["pizza"] += 5
@@ -385,7 +375,6 @@ def duel_pizza(user, ws):
             del duels[challenger]
             return None
         
-        # Передаём пиццу победителю
         winner_player = get_player(winner)
         winner_player["pizza"] += win_amount
         winner_player["total_pizza"] += win_amount
@@ -393,7 +382,7 @@ def duel_pizza(user, ws):
         save_player(winner)
         
         loser_player = get_player(loser)
-        loser_player["pizza"] = 0  # Забираем всё
+        loser_player["pizza"] = 0
         loser_player["duel_losses"] += 1
         save_player(loser)
         
@@ -470,7 +459,6 @@ def handle_command(user, cmd, args, ws=None):
     #  ОБЫЧНЫЕ КОМАНДЫ
     # ============================================================
     if cmd == "!пицца":
-        # Проверяем, есть ли активная дуэль
         for c, data in duels.items():
             if data["status"] == "active":
                 if c == user or data["target"] == user:
@@ -479,7 +467,6 @@ def handle_command(user, cmd, args, ws=None):
                         return result
                     return None
         
-        # Обычная !пицца
         if user in cooldowns and now - cooldowns[user] < COOLDOWN_TIME:
             remaining = int(COOLDOWN_TIME - (now - cooldowns[user]))
             return f"⏳ @{user}, подожди {remaining} сек"
@@ -554,6 +541,18 @@ def handle_command(user, cmd, args, ws=None):
         
         return f"✅ @{user} передал {amount} 🍕 игроку @{target}! Теперь у {target}: {target_player['pizza']} 🍕"
     
+    # ============================================================
+    #  !ШАНС (ДЛЯ ВСЕХ)
+    # ============================================================
+    elif cmd == "!шанс":
+        if not args:
+            return f"❌ @{user}, напиши: !шанс <текст вопроса>"
+        
+        question = ' '.join(args)
+        chance = random.randint(0, 100)
+        
+        return f"🎲 @{user}, думаю, вероятность того, что {question} — {chance}%!"
+    
     elif cmd == "!рецепт":
         if not args or len(args) < 4:
             return "❌ @{user}, напиши 4 ингредиента через пробел"
@@ -589,6 +588,7 @@ def handle_command(user, cmd, args, ws=None):
 ⚔️ !дуэль @ник — вызвать на дуэль
 ✅ !принять_дуэль — принять дуэль
 ❌ !отказаться_дуэль — отказаться от дуэли
+🎲 !шанс <текст> — случайный процент
 🍕 !рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
 ❓ !помощь — это сообщение
 
@@ -641,7 +641,7 @@ def start_bot():
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
             print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот с дуэлями запущен! Пиши !помощь")
+            send_to_chat(ws, "🍕 Пицца-бот с шансом запущен! Пиши !помощь")
             
             while True:
                 try:
