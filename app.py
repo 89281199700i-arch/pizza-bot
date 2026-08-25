@@ -16,9 +16,9 @@ ADMIN_USER = "kvakish_"
 
 SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
-EVENT_TIMEOUT = 180 # 1 минута
+EVENT_TIMEOUT = 60
 
-print("🚀 ПИЦЦА-БОТ С ИВЕНТАМИ (ИСПРАВЛЕННЫЙ)")
+print("🚀 ПИЦЦА-БОТ С ДУЭЛЯМИ")
 
 # ============================================================
 #  ДАННЫЕ
@@ -38,6 +38,11 @@ def save_data(data):
 
 players = load_data()
 cooldowns = {}
+
+# ============================================================
+#  ДУЭЛИ
+# ============================================================
+duels = {}  # { challenger: {"target": target, "status": "waiting"} }
 
 # ============================================================
 #  ИВЕНТ
@@ -61,6 +66,8 @@ def get_player(user):
             "wins": 0,
             "hidden": False,
             "event_wins": 0,
+            "duel_wins": 0,
+            "duel_losses": 0,
             "boosts": {
                 "double": {"active": False, "uses_left": 0, "max_uses": 4}
             }
@@ -125,7 +132,7 @@ def get_boost_status(user):
     return " | ".join(status) if status else "Нет активных бустов"
 
 # ============================================================
-#  ИВЕНТ "ПРОФЕССИОНАЛ ПО ПИЦЦЕ"
+#  ИВЕНТ
 # ============================================================
 def stop_event():
     global event_active, event_timer
@@ -144,11 +151,9 @@ def generate_event():
     if event_active:
         return "⚠️ Ивент уже активен! Дождись окончания."
     
-    # Генерируем 4 ингредиента (без эмодзи)
     event_answer = random.sample(event_ingredients, 4)
     event_active = True
     
-    # Показываем все ингредиенты с эмодзи
     emoji_map = {
         "Томатный соус": "🍅", "Моцарелла": "🧀", "Тесто": "🍕", "Орегано": "🌿",
         "Пепперони": "🥓", "Лук": "🧅", "Перец": "🫑", "Грибы": "🍄",
@@ -159,7 +164,6 @@ def generate_event():
     all_ingredients = event_ingredients.copy()
     random.shuffle(all_ingredients)
     
-    # Формируем список с эмодзи
     ingredient_list = []
     for ing in all_ingredients[:8]:
         ingredient_list.append(f"{emoji_map.get(ing, '')} {ing}")
@@ -169,12 +173,11 @@ def generate_event():
 Доступные ингредиенты: {' | '.join(ingredient_list)}
 Напиши: !рецепт <ингредиент1> <ингредиент2> <ингредиент3> <ингредиент4>
 Победитель получит 20 🍕 и БЕСПЛАТНЫЙ БУСТ!
-⏰ У тебя есть 3 минуты! """
+⏰ У тебя есть 1 минута!"""
     
     send_to_chat(event_ws, msg)
     print(f"🎉 Ивент запущен! Ответ: {event_answer}")
     
-    # Запускаем таймер
     event_timer = threading.Timer(EVENT_TIMEOUT, stop_event)
     event_timer.daemon = True
     event_timer.start()
@@ -190,17 +193,14 @@ def check_event_guess(user, guess):
     if len(guess) != 4:
         return "❌ Напиши ровно 4 ингредиента! Например: !рецепт Тесто Сыр Соус Грибы"
     
-    # Проверяем каждый ингредиент
     for g in guess:
         if g not in event_ingredients:
             return f"❌ Ингредиент '{g}' не найден! Используй названия из списка."
     
-    # Сравниваем (игнорируем регистр)
     guess_lower = [g.lower() for g in guess]
     answer_lower = [a.lower() for a in event_answer]
     
     if set(guess_lower) == set(answer_lower):
-        # Победитель!
         event_active = False
         if event_timer:
             event_timer.cancel()
@@ -211,7 +211,6 @@ def check_event_guess(user, guess):
         player["total_pizza"] += 20
         player["event_wins"] += 1
         
-        # Бесплатный буст
         if "double" in player["boosts"]:
             player["boosts"]["double"]["active"] = True
             player["boosts"]["double"]["uses_left"] = 4
@@ -235,7 +234,6 @@ def check_event_guess(user, guess):
         send_to_chat(event_ws, msg)
         return None
     
-    # Подсказка: сколько угадал
     correct = len(set(guess_lower) & set(answer_lower))
     if correct == 0:
         return "❌ Ни одного правильного ингредиента! Попробуй ещё."
@@ -260,6 +258,155 @@ def force_stop_event():
     
     send_to_chat(event_ws, "🛑 Ивент остановлен создателем!")
     return "✅ Ивент остановлен!"
+
+# ============================================================
+#  ДУЭЛЬ
+# ============================================================
+def start_duel(challenger, target, ws):
+    if challenger == target:
+        return "❌ @{challenger}, нельзя вызвать на дуэль самого себя!"
+    
+    if target not in players:
+        return f"❌ @{challenger}, игрок '{target}' не найден!"
+    
+    if get_player(challenger)["pizza"] < 1:
+        return f"❌ @{challenger}, у тебя нет пиццы для дуэли!"
+    
+    if challenger in duels:
+        return f"❌ @{challenger}, у тебя уже есть активный вызов на дуэль!"
+    
+    duels[challenger] = {"target": target, "status": "waiting"}
+    
+    msg = f"⚔️ @{challenger} вызывает @{target} на ДУЭЛЬ! 🍕\nУ кого выпадет больше пиццы за 1 минуту — тот забирает всё!\n@{target}, напиши !принять_дуэль или !отказаться_дуэль"
+    send_to_chat(ws, msg)
+    
+    # Таймер на принятие (30 секунд)
+    def duel_timeout():
+        if challenger in duels and duels[challenger]["status"] == "waiting":
+            del duels[challenger]
+            send_to_chat(ws, f"⏰ @{challenger}, время на принятие дуэли вышло!")
+    
+    timer = threading.Timer(30, duel_timeout)
+    timer.daemon = True
+    timer.start()
+    
+    return None
+
+def accept_duel(user, ws):
+    # Находим, кто вызвал этого пользователя
+    challenger = None
+    for c, data in duels.items():
+        if data["target"] == user and data["status"] == "waiting":
+            challenger = c
+            break
+    
+    if not challenger:
+        return f"❌ @{user}, у тебя нет активных вызовов на дуэль!"
+    
+    # Начинаем дуэль
+    duels[challenger]["status"] = "active"
+    duels[challenger]["start_time"] = time.time()
+    
+    # Даём каждому по 5 попыток !пицца
+    duels[challenger]["attempts"] = {challenger: 0, user: 0}
+    duels[challenger]["pizza_got"] = {challenger: 0, user: 0}
+    
+    msg = f"⚔️ ДУЭЛЬ НАЧАЛАСЬ! @{challenger} VS @{user}!\nУ каждого по 5 попыток !пицца. У кого больше — тот забирает всё! 🍕"
+    send_to_chat(ws, msg)
+    return None
+
+def decline_duel(user, ws):
+    challenger = None
+    for c, data in duels.items():
+        if data["target"] == user and data["status"] == "waiting":
+            challenger = c
+            break
+    
+    if not challenger:
+        return f"❌ @{user}, у тебя нет активных вызовов на дуэль!"
+    
+    del duels[challenger]
+    send_to_chat(ws, f"❌ @{user} отказался от дуэли с @{challenger}!")
+    return None
+
+def duel_pizza(user, ws):
+    # Проверяем, есть ли у пользователя активная дуэль
+    active_duel = None
+    for c, data in duels.items():
+        if data["status"] == "active":
+            if c == user or data["target"] == user:
+                active_duel = (c, data)
+                break
+    
+    if not active_duel:
+        return None  # Не обрабатываем, это обычная !пицца
+    
+    challenger, data = active_duel
+    target = data["target"]
+    
+    if data["attempts"][user] >= 5:
+        return f"⏳ @{user}, у тебя закончились попытки в дуэли!"
+    
+    # Генерируем пиццу для дуэли (1-6, без бустов)
+    pizza = random.randint(1, 6)
+    data["pizza_got"][user] += pizza
+    data["attempts"][user] += 1
+    
+    msg = f"🍕 @{user} получает {pizza} пиццы в дуэли! (Попытка {data['attempts'][user]}/5)"
+    send_to_chat(ws, msg)
+    
+    # Проверяем, закончили ли оба
+    if data["attempts"][challenger] >= 5 and data["attempts"][target] >= 5:
+        # Определяем победителя
+        c_pizza = data["pizza_got"][challenger]
+        t_pizza = data["pizza_got"][target]
+        
+        if c_pizza > t_pizza:
+            winner = challenger
+            loser = target
+            win_amount = c_pizza + t_pizza
+        elif t_pizza > c_pizza:
+            winner = target
+            loser = challenger
+            win_amount = c_pizza + t_pizza
+        else:
+            # Ничья
+            send_to_chat(ws, f"🤝 ДУЭЛЬ ЗАВЕРШЕНА! Ничья! Оба игрока получают по 5 🍕")
+            winner_player = get_player(challenger)
+            winner_player["pizza"] += 5
+            winner_player["total_pizza"] += 5
+            save_player(challenger)
+            
+            loser_player = get_player(target)
+            loser_player["pizza"] += 5
+            loser_player["total_pizza"] += 5
+            save_player(target)
+            
+            del duels[challenger]
+            return None
+        
+        # Передаём пиццу победителю
+        winner_player = get_player(winner)
+        winner_player["pizza"] += win_amount
+        winner_player["total_pizza"] += win_amount
+        winner_player["duel_wins"] += 1
+        save_player(winner)
+        
+        loser_player = get_player(loser)
+        loser_player["pizza"] = 0  # Забираем всё
+        loser_player["duel_losses"] += 1
+        save_player(loser)
+        
+        msg = f"""⚔️ **ДУЭЛЬ ЗАВЕРШЕНА!** ⚔️
+🏆 @{winner} ПОБЕДИЛ! @{loser} проиграл!
+@{winner} забирает {win_amount} 🍕!
+Теперь у {winner}: {winner_player['pizza']} 🍕
+У {loser}: 0 🍕"""
+        
+        send_to_chat(ws, msg)
+        del duels[challenger]
+    
+    return None
 
 # ============================================================
 #  КОМАНДЫ
@@ -296,11 +443,43 @@ def handle_command(user, cmd, args, ws=None):
         
         elif cmd == "!стоп_ивент":
             return force_stop_event()
+        
+        elif cmd == "!обнулить_всех":
+            for name in list(players.keys()):
+                players[name]["pizza"] = 0
+                players[name]["total_pizza"] = 0
+            save_data(players)
+            return "👑 @kvakish_, у ВСЕХ игроков пицца обнулена до 0! 🍕"
+
+    # ============================================================
+    #  ДУЭЛИ
+    # ============================================================
+    if cmd == "!дуэль":
+        if not args:
+            return "❌ @{user}, напиши: !дуэль @ник"
+        target = args[0].replace('@', '')
+        return start_duel(user, target, ws)
+    
+    elif cmd == "!принять_дуэль":
+        return accept_duel(user, ws)
+    
+    elif cmd == "!отказаться_дуэль":
+        return decline_duel(user, ws)
 
     # ============================================================
     #  ОБЫЧНЫЕ КОМАНДЫ
     # ============================================================
     if cmd == "!пицца":
+        # Проверяем, есть ли активная дуэль
+        for c, data in duels.items():
+            if data["status"] == "active":
+                if c == user or data["target"] == user:
+                    result = duel_pizza(user, ws)
+                    if result:
+                        return result
+                    return None
+        
+        # Обычная !пицца
         if user in cooldowns and now - cooldowns[user] < COOLDOWN_TIME:
             remaining = int(COOLDOWN_TIME - (now - cooldowns[user]))
             return f"⏳ @{user}, подожди {remaining} сек"
@@ -335,7 +514,7 @@ def handle_command(user, cmd, args, ws=None):
     
     elif cmd == "!пицца_стата":
         hidden_status = " (скрыт из топа)" if player.get("hidden", False) else ""
-        return f"📊 @{user}, у тебя {player['pizza']} 🍕 | Всего: {player['total_pizza']}{hidden_status} | Ивентов выиграно: {player['event_wins']}"
+        return f"📊 @{user}, у тебя {player['pizza']} 🍕 | Всего: {player['total_pizza']}{hidden_status} | Ивентов выиграно: {player['event_wins']} | Дуэлей: побед {player['duel_wins']} / поражений {player['duel_losses']}"
     
     elif cmd == "!съесть_пиццу":
         if player["pizza"] <= 0:
@@ -378,9 +557,7 @@ def handle_command(user, cmd, args, ws=None):
     elif cmd == "!рецепт":
         if not args or len(args) < 4:
             return "❌ @{user}, напиши 4 ингредиента через пробел"
-        
-        # Собираем все аргументы как один список ингредиентов
-        guess = args[:4]  # берём первые 4 слова
+        guess = args[:4]
         result = check_event_guess(user, guess)
         return result
     
@@ -401,16 +578,26 @@ def handle_command(user, cmd, args, ws=None):
     
     elif cmd == "!помощь":
         return """📖 Команды:
-!пицца — получить пиццу
-!топ_пицца — топ игроков
-!пицца_стата — твоя статистика
-!съесть_пиццу — съесть 1 пиццу
-!поделиться_пиццей @ник <число> — передать пиццу
-!магазин_бустов — список бустов
-!купить_буст <название> — купить буст (double)
-!мой_буст — статус твоих бустов
-!рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
-!помощь — это сообщение"""
+🍕 !пицца — получить пиццу
+🏆 !топ_пицца — топ игроков
+📊 !пицца_стата — твоя статистика
+🍽️ !съесть_пиццу — съесть 1 пиццу
+🤝 !поделиться_пиццей @ник <число> — передать пиццу
+🛒 !магазин_бустов — список бустов
+💰 !купить_буст <название> — купить буст
+🎯 !мой_буст — статус твоих бустов
+⚔️ !дуэль @ник — вызвать на дуэль
+✅ !принять_дуэль — принять дуэль
+❌ !отказаться_дуэль — отказаться от дуэли
+🍕 !рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
+❓ !помощь — это сообщение
+
+👑 Команды создателя:
+!запустить_ивент
+!стоп_ивент
+!обнулить_всех
+!всё_99999+
+!i_b_th_off"""
     
     return None
 
@@ -454,7 +641,7 @@ def start_bot():
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
             print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот с ивентами запущен! Пиши !помощь")
+            send_to_chat(ws, "🍕 Пицца-бот с дуэлями запущен! Пиши !помощь")
             
             while True:
                 try:
