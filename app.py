@@ -18,7 +18,7 @@ SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 EVENT_TIMEOUT = 60
 
-print("🚀 ПИЦЦА-БОТ")
+print("🚀 ПИЦЦА-БОТ С ПЕРЕВОДЧИКОМ")
 
 # ============================================================
 #  ДАННЫЕ
@@ -579,6 +579,37 @@ def handle_command(user, cmd, args, ws=None):
         
         return random.choice(reactions)
     
+    # ============================================================
+    #  ПЕРЕВОДЧИК (Google Translate)
+    # ============================================================
+    elif cmd == "!fasttrans":
+        if not args:
+            return f"❌ @{user}, напиши: !fasttrans <текст для перевода>"
+        
+        text = ' '.join(args)
+        
+        try:
+            from googletrans import Translator
+            translator = Translator()
+            
+            detected = translator.detect(text)
+            src_lang = detected.lang
+            
+            if src_lang == 'ru':
+                dest_lang = 'en'
+                lang_name = "английский"
+            else:
+                dest_lang = 'ru'
+                lang_name = "русский"
+            
+            result = translator.translate(text, dest=dest_lang)
+            
+            return f"🗣️ @{user}, перевод на {lang_name}: \"{result.text}\""
+            
+        except Exception as e:
+            print(f"⚠️ Ошибка перевода: {e}")
+            return f"❌ @{user}, ошибка перевода! Проверь интернет или попробуй позже. 🍕"
+    
     elif cmd == "!магазин_бустов":
         boost_list = []
         for key, boost in BOOSTS.items():
@@ -609,7 +640,8 @@ def handle_command(user, cmd, args, ws=None):
 ❌ !отказаться_дуэль — отказаться от дуэли
 🎲 !шанс <текст> — случайный процент
 🍕 !рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
-🍍 !ананас @ник — испортить пиццу ананасом (без @ника — испортит себе)
+🍍 !ананас @ник — испортить пиццу ананасом
+🗣️ !fasttrans <текст> — перевод на русский/английский
 ❓ !помощь — это сообщение
 
 👑 Команды создателя:
@@ -661,7 +693,7 @@ def start_bot():
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
             print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот запущен! Пиши !помощь")
+            send_to_chat(ws, "🍕 Пицца-бот с переводчиком запущен! Пиши !помощь")
             
             while True:
                 try:
