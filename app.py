@@ -15,100 +15,10 @@ TWITCH_CHANNEL = "#QumosX"
 ADMIN_USER = "kvakish_"
 
 SAVE_FILE = "pizza_data.json"
-DICT_FILE = "dictionary.json"
 COOLDOWN_TIME = 5
 EVENT_TIMEOUT = 60
 
-print("🚀 ПИЦЦА-БОТ С ОФЛАЙН-ПЕРЕВОДЧИКОМ")
-
-# ============================================================
-#  СОЗДАНИЕ СЛОВАРЯ (30 000 слов)
-# ============================================================
-def generate_dictionary():
-    base_words = [
-        "привет", "пока", "как", "дела", "спасибо", "пицца", "ананас", "бот", "код",
-        "игра", "победа", "поражение", "день", "ночь", "солнце", "луна", "звезда",
-        "небо", "вода", "огонь", "земля", "ветер", "дождь", "снег", "лед", "гора",
-        "река", "море", "океан", "лес", "поле", "город", "деревня", "дом", "квартира",
-        "комната", "кухня", "ванна", "туалет", "коридор", "лестница", "лифт", "крыша",
-        "стена", "пол", "потолок", "окно", "дверь", "стол", "стул", "кровать", "диван",
-        "шкаф", "зеркало", "лампа", "свет", "тень", "цвет", "форма", "размер", "вес",
-        "длина", "ширина", "высота", "глубина", "скорость", "время", "дата", "год",
-        "месяц", "неделя", "час", "минута", "секунда", "мгновение", "вечность",
-        "космос", "галактика", "планета", "спутник", "астероид", "комета", "метеорит",
-        "черная_дыра", "туманность", "квазар", "пульсар", "нейтронная_звезда",
-        "компьютер", "монитор", "клавиатура", "мышь", "процессор", "память", "диск",
-        "файл", "папка", "программа", "код", "скрипт", "сервер", "клиент", "сеть",
-        "интернет", "сайт", "страница", "ссылка", "поиск", "браузер", "чат", "бот",
-        "пицца", "тесто", "соус", "сыр", "колбаса", "грибы", "овощи", "специи"
-    ]
-    
-    prefixes = ["супер", "мега", "ультра", "гипер", "архи", "мульти", "поли", "анти", "контр"]
-    suffixes = ["ный", "овой", "ельный", "истый", "астый", "чий", "ский", "овый", "евый"]
-    
-    dictionary = {}
-    words_added = 0
-    
-    # Добавляем базовые слова
-    for word in base_words:
-        translation = word
-        ru_to_en = {
-            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'ye', 'ё': 'yo',
-            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-            'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
-            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-            ' ': '_'
-        }
-        for ru, en in ru_to_en.items():
-            translation = translation.replace(ru, en)
-        dictionary[word] = translation
-        words_added += 1
-    
-    # Генерируем до 30 000
-    while words_added < 30000:
-        base = random.choice(base_words)
-        prefix = random.choice(prefixes) if random.random() > 0.5 else ""
-        suffix = random.choice(suffixes) if random.random() > 0.5 else ""
-        new_word = prefix + base + suffix
-        
-        if new_word not in dictionary and len(new_word) > 0:
-            translation = new_word
-            ru_to_en = {
-                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'ye', 'ё': 'yo',
-                'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-                'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-                'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
-                'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-                ' ': '_'
-            }
-            for ru, en in ru_to_en.items():
-                translation = translation.replace(ru, en)
-            dictionary[new_word] = translation
-            words_added += 1
-    
-    return dictionary
-
-def load_dictionary():
-    if os.path.exists(DICT_FILE):
-        try:
-            with open(DICT_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                print(f"✅ Загружен словарь: {len(data)} слов")
-                return data
-        except:
-            pass
-    
-    print("🔄 Генерация словаря на 30 000 слов... Это может занять 20-30 секунд...")
-    dictionary = generate_dictionary()
-    
-    with open(DICT_FILE, "w", encoding="utf-8") as f:
-        json.dump(dictionary, f, indent=2, ensure_ascii=False)
-    
-    print(f"✅ Создан словарь: {len(dictionary)} слов")
-    return dictionary
-
-dictionary = load_dictionary()
+print("🚀 ПИЦЦА-БОТ")
 
 # ============================================================
 #  ДАННЫЕ
@@ -488,30 +398,6 @@ def duel_pizza(user, ws):
     return None
 
 # ============================================================
-#  ПЕРЕВОДЧИК (ОФЛАЙН)
-# ============================================================
-def translate_offline(text):
-    words = text.lower().split()
-    translated = []
-    
-    for word in words:
-        clean_word = word.strip('.,!?;:()[]{}')
-        if clean_word in dictionary:
-            translated.append(dictionary[clean_word])
-        else:
-            # Проверяем составные части
-            found = False
-            for key in dictionary:
-                if key in clean_word:
-                    translated.append(dictionary[key])
-                    found = True
-                    break
-            if not found:
-                translated.append(word)
-    
-    return ' '.join(translated)
-
-# ============================================================
 #  КОМАНДЫ
 # ============================================================
 def handle_command(user, cmd, args, ws=None):
@@ -693,18 +579,6 @@ def handle_command(user, cmd, args, ws=None):
         
         return random.choice(reactions)
     
-    # ============================================================
-    #  ПЕРЕВОДЧИК (ОФЛАЙН)
-    # ============================================================
-    elif cmd == "!fasttrans":
-        if not args:
-            return f"❌ @{user}, напиши: !fasttrans <текст для перевода>"
-        
-        text = ' '.join(args)
-        translated = translate_offline(text)
-        
-        return f"🗣️ @{user}, перевод: \"{translated}\""
-    
     elif cmd == "!магазин_бустов":
         boost_list = []
         for key, boost in BOOSTS.items():
@@ -736,7 +610,6 @@ def handle_command(user, cmd, args, ws=None):
 🎲 !шанс <текст> — случайный процент
 🍕 !рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
 🍍 !ананас @ник — испортить пиццу ананасом (без @ника — испортит себе)
-🗣️ !fasttrans <текст> — перевод на пиццерийский (офлайн, 30к слов)
 ❓ !помощь — это сообщение
 
 👑 Команды создателя:
@@ -788,7 +661,7 @@ def start_bot():
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
             print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот с офлайн-переводчиком запущен! Пиши !помощь")
+            send_to_chat(ws, "🍕 Пицца-бот запущен! Пиши !помощь")
             
             while True:
                 try:
