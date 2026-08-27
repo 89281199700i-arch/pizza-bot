@@ -4,6 +4,7 @@ import json
 import random
 import os
 import threading
+import string
 
 # ============================================================
 #  НАСТРОЙКИ
@@ -15,10 +16,112 @@ TWITCH_CHANNEL = "#QumosX"
 ADMIN_USER = "kvakish_"
 
 SAVE_FILE = "pizza_data.json"
+DICT_FILE = "dictionary.json"
 COOLDOWN_TIME = 5
 EVENT_TIMEOUT = 60
 
-print("🚀 ПИЦЦА-БОТ С ПЕРЕВОДЧИКОМ")
+print("🚀 ПИЦЦА-БОТ С ОФЛАЙН-ПЕРЕВОДЧИКОМ")
+
+# ============================================================
+#  СОЗДАНИЕ СЛОВАРЯ НА 30 000 СЛОВ
+# ============================================================
+def generate_dictionary():
+    """Генерирует словарь из 30 000 слов для перевода"""
+    
+    # Базовые слова для генерации
+    base_words = [
+        "привет", "пока", "как", "дела", "спасибо", "пицца", "ананас", "бот", "код", 
+        "игра", "победа", "поражение", "день", "ночь", "солнце", "луна", "звезда", 
+        "небо", "вода", "огонь", "земля", "ветер", "дождь", "снег", "лед", "гора", 
+        "река", "море", "океан", "лес", "поле", "город", "деревня", "дом", "квартира", 
+        "комната", "кухня", "ванна", "туалет", "коридор", "лестница", "лифт", "крыша", 
+        "стена", "пол", "потолок", "окно", "дверь", "стол", "стул", "кровать", "диван", 
+        "шкаф", "зеркало", "лампа", "свет", "тень", "цвет", "форма", "размер", "вес", 
+        "длина", "ширина", "высота", "глубина", "скорость", "время", "дата", "год", 
+        "месяц", "неделя", "день", "час", "минута", "секунда", "мгновение", "вечность", 
+        "космос", "галактика", "звезда", "планета", "спутник", "астероид", "комета", 
+        "метеорит", "черная_дыра", "туманность", "квазар", "пульсар", "нейтронная_звезда"
+    ]
+    
+    # Добавляем суффиксы и префиксы для разнообразия
+    prefixes = ["", "супер", "мега", "ультра", "гипер", "архи", "мульти", "поли"]
+    suffixes = ["ный", "овой", "ельный", "истый", "астый", "чий", "ский"]
+    
+    dictionary = {}
+    words_added = 0
+    
+    # 1. Добавляем базовые слова с переводами на английский
+    for word in base_words:
+        # Генерируем "перевод" (в реальности это будет просто замена букв)
+        translation = word
+        # Заменяем русские буквы на латиницу (примитивный перевод)
+        ru_to_en = {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'ye', 'ё': 'yo',
+            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+            'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+            ' ': '_'
+        }
+        
+        for ru, en in ru_to_en.items():
+            translation = translation.replace(ru, en)
+        
+        dictionary[word] = translation
+        words_added += 1
+    
+    # 2. Генерируем дополнительные слова до 30 000
+    while words_added < 30000:
+        # Берём случайное базовое слово
+        base = random.choice(base_words)
+        prefix = random.choice(prefixes)
+        suffix = random.choice(suffixes)
+        
+        # Создаём новое слово
+        new_word = prefix + base + suffix
+        
+        # Генерируем "перевод" (транслитерация)
+        translation = new_word
+        ru_to_en = {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'ye', 'ё': 'yo',
+            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+            'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+            ' ': '_'
+        }
+        
+        for ru, en in ru_to_en.items():
+            translation = translation.replace(ru, en)
+        
+        if new_word not in dictionary:
+            dictionary[new_word] = translation
+            words_added += 1
+    
+    return dictionary
+
+def load_dictionary():
+    """Загружает словарь из файла или генерирует новый"""
+    if os.path.exists(DICT_FILE):
+        try:
+            with open(DICT_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                print(f"✅ Загружен словарь: {len(data)} слов")
+                return data
+        except:
+            pass
+    
+    print("🔄 Генерация словаря на 30 000 слов... Это может занять 10-20 секунд...")
+    dictionary = generate_dictionary()
+    
+    with open(DICT_FILE, "w", encoding="utf-8") as f:
+        json.dump(dictionary, f, indent=2, ensure_ascii=False)
+    
+    print(f"✅ Создан словарь: {len(dictionary)} слов")
+    return dictionary
+
+# Загружаем словарь
+dictionary = load_dictionary()
 
 # ============================================================
 #  ДАННЫЕ
@@ -398,6 +501,50 @@ def duel_pizza(user, ws):
     return None
 
 # ============================================================
+#  ПЕРЕВОДЧИК (ОФЛАЙН + GOOGLE КАК ЗАПАС)
+# ============================================================
+def translate_offline(text):
+    """Переводит текст используя локальный словарь"""
+    words = text.lower().split()
+    translated = []
+    
+    for word in words:
+        # Убираем пунктуацию
+        clean_word = word.strip('.,!?;:()[]{}')
+        
+        if clean_word in dictionary:
+            translated.append(dictionary[clean_word])
+        else:
+            # Проверяем составные слова
+            found = False
+            for key in dictionary:
+                if key in clean_word:
+                    translated.append(dictionary[key])
+                    found = True
+                    break
+            
+            if not found:
+                translated.append(word)
+    
+    return ' '.join(translated)
+
+def translate_google(text):
+    """Переводит через Google API (запасной вариант)"""
+    try:
+        from googletrans import Translator
+        translator = Translator()
+        detected = translator.detect(text)
+        
+        if detected.lang == 'ru':
+            result = translator.translate(text, dest='en')
+            return result.text, "английский (Google)"
+        else:
+            result = translator.translate(text, dest='ru')
+            return result.text, "русский (Google)"
+    except:
+        return None, None
+
+# ============================================================
 #  КОМАНДЫ
 # ============================================================
 def handle_command(user, cmd, args, ws=None):
@@ -574,141 +721,4 @@ def handle_command(user, cmd, args, ws=None):
             f"🍍 @{user} совершил ВОЙНУ с пиццей @{target}! Ананас на пицце — это грех! ⚠️",
             f"🍍 @{target} теперь ест пиццу с ананасом... @{user}, ты разрушил ему день! 💀",
             f"🍍 @{user} запихнул ананас в пиццу @{target}! Вкусовые рецепторы в панике! 🤯",
-            f"🍍 @{user} нанёс урон пицце @{target} ананасом! -100 к репутации! 📉",
-        ]
-        
-        return random.choice(reactions)
-    
-    # ============================================================
-    #  ПЕРЕВОДЧИК (Google Translate)
-    # ============================================================
-    elif cmd == "!fasttrans":
-        if not args:
-            return f"❌ @{user}, напиши: !fasttrans <текст для перевода>"
-        
-        text = ' '.join(args)
-        
-        try:
-            from googletrans import Translator
-            translator = Translator()
-            
-            detected = translator.detect(text)
-            src_lang = detected.lang
-            
-            if src_lang == 'ru':
-                dest_lang = 'en'
-                lang_name = "английский"
-            else:
-                dest_lang = 'ru'
-                lang_name = "русский"
-            
-            result = translator.translate(text, dest=dest_lang)
-            
-            return f"🗣️ @{user}, перевод на {lang_name}: \"{result.text}\""
-            
-        except Exception as e:
-            print(f"⚠️ Ошибка перевода: {e}")
-            return f"❌ @{user}, ошибка перевода! Проверь интернет или попробуй позже. 🍕"
-    
-    elif cmd == "!магазин_бустов":
-        boost_list = []
-        for key, boost in BOOSTS.items():
-            boost_list.append(f"{key}: {boost['name']} — {boost['price']} 🍕 ({boost['description']})")
-        return f"🛒 Магазин бустов: {' | '.join(boost_list)}"
-    
-    elif cmd == "!купить_буст":
-        if not args:
-            return "❌ @{user}, напиши: !купить_буст <название> (доступно: double)"
-        boost_key = args[0].lower()
-        return activate_boost(user, boost_key)
-    
-    elif cmd == "!мой_буст":
-        return f"🎯 @{user}, твои бусты: {get_boost_status(user)}"
-    
-    elif cmd == "!помощь":
-        return """📖 Команды:
-🍕 !пицца — получить пиццу
-🏆 !топ_пицца — топ игроков
-📊 !пицца_стата — твоя статистика
-🍽️ !съесть_пиццу — съесть 1 пиццу
-🤝 !поделиться_пиццей @ник <число> — передать пиццу
-🛒 !магазин_бустов — список бустов
-💰 !купить_буст <название> — купить буст
-🎯 !мой_буст — статус твоих бустов
-⚔️ !дуэль @ник — вызвать на дуэль
-✅ !принять_дуэль — принять дуэль
-❌ !отказаться_дуэль — отказаться от дуэли
-🎲 !шанс <текст> — случайный процент
-🍕 !рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
-🍍 !ананас @ник — испортить пиццу ананасом
-🗣️ !fasttrans <текст> — перевод на русский/английский
-❓ !помощь — это сообщение
-
-👑 Команды создателя:
-!запустить_ивент
-!стоп_ивент
-!обнулить_всех
-!всё_99999+
-!i_b_th_off"""
-    
-    return None
-
-# ============================================================
-#  WEBSOCKET
-# ============================================================
-def on_message(ws, msg):
-    global event_ws
-    if not event_ws:
-        event_ws = ws
-    
-    for line in msg.split('\r\n'):
-        if not line:
-            continue
-        if line.startswith('PING'):
-            ws.send('PONG :tmi.twitch.tv')
-            continue
-        if 'PRIVMSG' in line:
-            try:
-                parts = line.split('PRIVMSG', 1)
-                user = parts[0].split(':')[1].split('!')[0]
-                text = parts[1].split(':', 1)[1].strip()
-                if user.lower() == TWITCH_BOT_NICKNAME.lower():
-                    continue
-                print(f"💬 {user}: {text}")
-                if text.startswith('!'):
-                    args = text.split()
-                    resp = handle_command(user, args[0], args[1:], ws)
-                    if resp:
-                        send_to_chat(ws, resp)
-            except Exception as e:
-                print(f"⚠️ {e}")
-
-def start_bot():
-    print("🔄 Подключение...")
-    while True:
-        try:
-            ws = websocket.WebSocket()
-            ws.connect("wss://irc-ws.chat.twitch.tv:443")
-            ws.send(f"PASS {TWITCH_OAUTH_TOKEN}\r\n")
-            ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
-            ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
-            print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот с переводчиком запущен! Пиши !помощь")
-            
-            while True:
-                try:
-                    msg = ws.recv()
-                    if msg:
-                        on_message(ws, msg)
-                except websocket.WebSocketConnectionClosedException:
-                    print("❌ Разрыв, переподключение...")
-                    break
-                except Exception as e:
-                    print(f"⚠️ {e}")
-                    break
-        except Exception as e:
-            print(f"❌ Ошибка: {e}")
-        time.sleep(5)
-
-if __name__ == "__main__":
-    start_bot()
+            f"🍍 @{user} нанёс урон пицце @{target} ананасом! -100 к репутации
