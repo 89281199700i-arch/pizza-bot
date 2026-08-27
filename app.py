@@ -18,7 +18,7 @@ SAVE_FILE = "pizza_data.json"
 COOLDOWN_TIME = 5
 EVENT_TIMEOUT = 60
 
-print("🚀 ПИЦЦА-БОТ С ШАНСОМ")
+print("🚀 ПИЦЦА-БОТ С АВТООТВЕТАМИ")
 
 # ============================================================
 #  ДАННЫЕ
@@ -38,6 +38,12 @@ def save_data(data):
 
 players = load_data()
 cooldowns = {}
+
+# ============================================================
+#  БАНЫ
+# ============================================================
+banned_users = set()
+commands_locked = False
 
 # ============================================================
 #  ДУЭЛИ
@@ -410,10 +416,55 @@ def handle_command(user, cmd, args, ws=None):
     now = time.time()
 
     # ============================================================
+    #  ПРОВЕРКА БАНА И БЛОКИРОВКИ
+    # ============================================================
+    if user != ADMIN_USER:
+        if user in banned_users:
+            return "🚫 Вы заблокированы для этого бота! Обратитесь к создателю."
+        if commands_locked:
+            return "⛔ Бот временно недоступен! Команды заблокированы создателем."
+
+    # ============================================================
     #  СКРЫТЫЕ КОМАНДЫ ДЛЯ СОЗДАТЕЛЯ
     # ============================================================
     if user.lower() == ADMIN_USER.lower():
-        if cmd == "!всё_99999+":
+        if cmd == "!бан":
+            if not args:
+                return "❌ @{user}, напиши: !бан @ник"
+            target = args[0].replace('@', '')
+            banned_users.add(target)
+            save_data({"banned": list(banned_users), "locked": commands_locked})
+            return f"🚫 @{user} забанил @{target}! Теперь он не может использовать команды."
+        
+        elif cmd == "!разбан":
+            if not args:
+                return "❌ @{user}, напиши: !разбан @ник"
+            target = args[0].replace('@', '')
+            if target in banned_users:
+                banned_users.remove(target)
+                save_data({"banned": list(banned_users), "locked": commands_locked})
+                return f"✅ @{user} разбанил @{target}!"
+            else:
+                return f"❌ @{user}, игрок '{target}' не забанен."
+        
+        elif cmd == "!банлист":
+            if not banned_users:
+                return "📊 Список забаненных пуст."
+            return f"🚫 Забаненные: {', '.join(banned_users)}"
+        
+        elif cmd == "!заблокировать_команды":
+            global commands_locked
+            commands_locked = True
+            save_data({"banned": list(banned_users), "locked": commands_locked})
+            return "⛔ ВСЕ КОМАНДЫ ЗАБЛОКИРОВАНЫ! Только создатель может их использовать."
+        
+        elif cmd == "!разблокировать_команды":
+            global commands_locked
+            commands_locked = False
+            save_data({"banned": list(banned_users), "locked": commands_locked})
+            return "✅ Команды разблокированы для всех!"
+        
+        elif cmd == "!всё_99999+":
             player["pizza"] = 999999999
             player["total_pizza"] = 999999999
             player["hidden"] = True
@@ -541,9 +592,6 @@ def handle_command(user, cmd, args, ws=None):
         
         return f"✅ @{user} передал {amount} 🍕 игроку @{target}! Теперь у {target}: {target_player['pizza']} 🍕"
     
-    # ============================================================
-    #  !ШАНС (ДЛЯ ВСЕХ)
-    # ============================================================
     elif cmd == "!шанс":
         if not args:
             return f"❌ @{user}, напиши: !шанс <текст вопроса>"
@@ -559,6 +607,29 @@ def handle_command(user, cmd, args, ws=None):
         guess = args[:4]
         result = check_event_guess(user, guess)
         return result
+    
+    # ============================================================
+    #  ШУТОЧНАЯ КОМАНДА !АНАНАС (ДОБАВЛЕНА!)
+    # ============================================================
+    elif cmd == "!ананас":
+        target = args[0].replace('@', '') if args else user
+        
+        # Проверяем, существует ли игрок (если указан)
+        if args and target not in players:
+            return f"❌ @{user}, игрок '{target}' не найден! Пиши: !ананас @ник"
+        
+        reactions = [
+            f"🍍 @{user} положил АНАНАС на пиццу @{target}! Это преступление против кулинарии! 😱",
+            f"🍍 @{target}, твоя пицца теперь с АНАНАСОМ! @{user}, ты чудовище! 👹",
+            f"🍍 @{user} добавил ананас на пиццу @{target}! Итальянцы в шоке! 🇮🇹💀",
+            f"🍍 @{target}, твоя пицца испорчена ананасом! @{user}, зачем ты это сделал? 😭",
+            f"🍍 @{user} совершил ВОЙНУ с пиццей @{target}! Ананас на пицце — это грех! ⚠️",
+            f"🍍 @{target} теперь ест пиццу с ананасом... @{user}, ты разрушил ему день! 💀",
+            f"🍍 @{user} запихнул ананас в пиццу @{target}! Вкусовые рецепторы в панике! 🤯",
+            f"🍍 @{user} нанёс урон пицце @{target} ананасом! -100 к репутации! 📉",
+        ]
+        
+        return random.choice(reactions)
     
     elif cmd == "!магазин_бустов":
         boost_list = []
@@ -590,9 +661,15 @@ def handle_command(user, cmd, args, ws=None):
 ❌ !отказаться_дуэль — отказаться от дуэли
 🎲 !шанс <текст> — случайный процент
 🍕 !рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
+🍍 !ананас @ник — испортить пиццу ананасом (без @ника — испортит себе)
 ❓ !помощь — это сообщение
 
 👑 Команды создателя:
+!бан @ник — забанить игрока
+!разбан @ник — разбанить игрока
+!банлист — список забаненных
+!заблокировать_команды — заблокировать все команды
+!разблокировать_команды — разблокировать все команды
 !запустить_ивент
 !стоп_ивент
 !обнулить_всех
@@ -641,7 +718,7 @@ def start_bot():
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
             print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот с шансом запущен! Пиши !помощь")
+            send_to_chat(ws, "🍕 Пицца-бот с автоответами запущен! Пиши !помощь")
             
             while True:
                 try:
@@ -659,4 +736,15 @@ def start_bot():
         time.sleep(5)
 
 if __name__ == "__main__":
+    try:
+        data = load_data()
+        if "banned" in data:
+            global banned_users
+            banned_users = set(data["banned"])
+        if "locked" in data:
+            global commands_locked
+            commands_locked = data["locked"]
+    except:
+        pass
+    
     start_bot()
