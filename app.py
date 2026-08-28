@@ -40,8 +40,7 @@ def generate_dictionary():
         "черная_дыра", "туманность", "квазар", "пульсар", "нейтронная_звезда",
         "компьютер", "монитор", "клавиатура", "мышь", "процессор", "память", "диск",
         "файл", "папка", "программа", "скрипт", "сервер", "клиент", "сеть",
-        "интернет", "сайт", "страница", "ссылка", "поиск", "браузер", "чат", "бот",
-        "пицца", "тесто", "соус", "сыр", "колбаса", "грибы", "овощи", "специи"
+        "интернет", "сайт", "страница", "ссылка", "поиск", "браузер", "чат", "бот"
     ]
     
     prefixes = ["супер", "мега", "ультра", "гипер", "архи", "мульти", "поли", "анти", "контр"]
@@ -594,10 +593,10 @@ def duel_pizza(user, ws):
     return None
 
 # ============================================================
-#  ФУНКЦИИ ДЛЯ ВИКТОРИНЫ
+#  ФУНКЦИИ ДЛЯ ВИКТОРИНЫ (ИСПРАВЛЕННЫЕ)
 # ============================================================
 def start_quiz_voting(ws):
-    global quiz_active, quiz_categories, quiz_votes, quiz_phase, quiz_ws
+    global quiz_active, quiz_categories, quiz_votes, quiz_phase, quiz_ws, quiz_timer
     
     if quiz_active:
         return "⚠️ Викторина уже активна! Дождись окончания."
@@ -625,7 +624,6 @@ def start_quiz_voting(ws):
     
     send_to_chat(ws, msg)
     
-    global quiz_timer
     quiz_timer = threading.Timer(30, finish_voting)
     quiz_timer.daemon = True
     quiz_timer.start()
@@ -634,6 +632,7 @@ def start_quiz_voting(ws):
 
 def finish_voting():
     global quiz_categories, quiz_votes, quiz_phase, quiz_active, quiz_timer, quiz_ws
+    global quiz_questions, quiz_current_question, quiz_score
     
     if quiz_phase != "voting":
         return
@@ -648,7 +647,6 @@ def finish_voting():
         chosen_category = winning_categories[0]
         send_to_chat(quiz_ws, f"✅ Победила категория: **{chosen_category}!** 🎉")
     
-    global quiz_questions, quiz_current_question, quiz_score, quiz_phase
     all_questions = quiz_questions_data.get(chosen_category, [])
     
     if len(all_questions) < QUESTIONS_PER_CATEGORY:
@@ -672,7 +670,7 @@ def finish_voting():
     ask_next_question()
 
 def ask_next_question():
-    global quiz_current_question, quiz_questions, quiz_phase, quiz_ws
+    global quiz_current_question, quiz_questions, quiz_phase, quiz_ws, quiz_timer
     
     if quiz_current_question >= len(quiz_questions):
         finish_quiz()
@@ -685,19 +683,24 @@ def ask_next_question():
     msg = f"📝 **Вопрос {question_num}/{total}:**\n{question_data['question']}\n\n✍️ Пиши ответ в чат! У тебя 15 секунд."
     send_to_chat(quiz_ws, msg)
     
-    global quiz_timer
     quiz_timer = threading.Timer(15, next_question_timeout)
     quiz_timer.daemon = True
     quiz_timer.start()
 
 def next_question_timeout():
-    global quiz_current_question
+    global quiz_current_question, quiz_ws, quiz_timer
+    
     quiz_current_question += 1
     send_to_chat(quiz_ws, "⏰ Время вышло! Следующий вопрос...")
+    
+    if quiz_timer:
+        quiz_timer.cancel()
+        quiz_timer = None
+    
     ask_next_question()
 
 def check_quiz_answer(user, answer):
-    global quiz_current_question, quiz_questions, quiz_phase, quiz_score, quiz_timer
+    global quiz_current_question, quiz_questions, quiz_phase, quiz_score, quiz_timer, quiz_ws
     
     if quiz_phase != "questions":
         return None
@@ -727,10 +730,14 @@ def check_quiz_answer(user, answer):
         return f"❌ @{user}, неправильно! Попробуй ещё..."
 
 def finish_quiz():
-    global quiz_active, quiz_phase, quiz_ws, quiz_score
+    global quiz_active, quiz_phase, quiz_ws, quiz_score, quiz_timer
     
     quiz_phase = "ended"
     quiz_active = False
+    
+    if quiz_timer:
+        quiz_timer.cancel()
+        quiz_timer = None
     
     if not quiz_score:
         send_to_chat(quiz_ws, "😔 Никто не ответил ни на один вопрос! Викторина завершена.")
