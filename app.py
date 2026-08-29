@@ -16,11 +16,10 @@ ADMIN_USER = "kvakish_"
 
 SAVE_FILE = "pizza_data.json"
 DICT_FILE = "dictionary.json"
-QUIZ_FILE = "quiz_data.json"
 COOLDOWN_TIME = 5
 EVENT_TIMEOUT = 60
 
-print("🚀 ПИЦЦА-БОТ С ВИКТОРИНОЙ И ПЕРЕВОДЧИКОМ")
+print("🚀 ПИЦЦА-БОТ С ОФЛАЙН-ПЕРЕВОДЧИКОМ")
 
 # ============================================================
 #  СОЗДАНИЕ СЛОВАРЯ (30 000 слов)
@@ -39,8 +38,9 @@ def generate_dictionary():
         "космос", "галактика", "планета", "спутник", "астероид", "комета", "метеорит",
         "черная_дыра", "туманность", "квазар", "пульсар", "нейтронная_звезда",
         "компьютер", "монитор", "клавиатура", "мышь", "процессор", "память", "диск",
-        "файл", "папка", "программа", "скрипт", "сервер", "клиент", "сеть",
-        "интернет", "сайт", "страница", "ссылка", "поиск", "браузер", "чат", "бот"
+        "файл", "папка", "программа", "код", "скрипт", "сервер", "клиент", "сеть",
+        "интернет", "сайт", "страница", "ссылка", "поиск", "браузер", "чат", "бот",
+        "пицца", "тесто", "соус", "сыр", "колбаса", "грибы", "овощи", "специи"
     ]
     
     prefixes = ["супер", "мега", "ультра", "гипер", "архи", "мульти", "поли", "анти", "контр"]
@@ -49,6 +49,7 @@ def generate_dictionary():
     dictionary = {}
     words_added = 0
     
+    # Добавляем базовые слова
     for word in base_words:
         translation = word
         ru_to_en = {
@@ -64,6 +65,7 @@ def generate_dictionary():
         dictionary[word] = translation
         words_added += 1
     
+    # Генерируем до 30 000
     while words_added < 30000:
         base = random.choice(base_words)
         prefix = random.choice(prefixes) if random.random() > 0.5 else ""
@@ -107,113 +109,6 @@ def load_dictionary():
     return dictionary
 
 dictionary = load_dictionary()
-
-# ============================================================
-#  ЗАГРУЗКА ВОПРОСОВ ДЛЯ ВИКТОРИНЫ
-# ============================================================
-def load_quiz_questions():
-    if os.path.exists(QUIZ_FILE):
-        try:
-            with open(QUIZ_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except:
-            pass
-    
-    demo_questions = {
-        "Программирование": [
-            {"question": "Что такое Python?", "answer": "Язык программирования"},
-            {"question": "Что такое HTML?", "answer": "Язык разметки"},
-            {"question": "Что такое CSS?", "answer": "Каскадные таблицы стилей"},
-            {"question": "Что такое JavaScript?", "answer": "Язык программирования"},
-            {"question": "Что такое SQL?", "answer": "Язык запросов"},
-        ],
-        "География": [
-            {"question": "Столица Франции?", "answer": "Париж"},
-            {"question": "Столица Германии?", "answer": "Берлин"},
-            {"question": "Столица Италии?", "answer": "Рим"},
-            {"question": "Столица Испании?", "answer": "Мадрид"},
-            {"question": "Столица Китая?", "answer": "Пекин"},
-        ],
-        "История": [
-            {"question": "Год начала Второй мировой войны?", "answer": "1939"},
-            {"question": "Кто открыл Америку?", "answer": "Колумб"},
-            {"question": "Год первого полёта человека в космос?", "answer": "1961"},
-            {"question": "Кто написал 'Войну и мир'?", "answer": "Толстой"},
-            {"question": "Год крещения Руси?", "answer": "988"},
-        ],
-        "Наука": [
-            {"question": "Формула воды?", "answer": "H2O"},
-            {"question": "Ближайшая звезда к Земле?", "answer": "Солнце"},
-            {"question": "Сколько планет в Солнечной системе?", "answer": "8"},
-            {"question": "Что изучает биология?", "answer": "Жизнь"},
-            {"question": "Что изучает физика?", "answer": "Природу"},
-        ],
-        "Игры": [
-            {"question": "Создатель Minecraft?", "answer": "Нотч"},
-            {"question": "Главный герой Mario?", "answer": "Марио"},
-            {"question": "Что такое RPG?", "answer": "Ролевая игра"},
-            {"question": "Создатель GTA?", "answer": "Rockstar"},
-            {"question": "Год выхода Fortnite?", "answer": "2017"},
-        ],
-        "Кино": [
-            {"question": "Режиссёр 'Титаника'?", "answer": "Кэмерон"},
-            {"question": "Кто играл Джокера?", "answer": "Хит Леджер"},
-            {"question": "Год выхода 'Матрицы'?", "answer": "1999"},
-            {"question": "Режиссёр 'Звёздных войн'?", "answer": "Лукас"},
-            {"question": "Кто играл Терминатора?", "answer": "Шварценеггер"},
-        ],
-        "Музыка": [
-            {"question": "Создатель 'Bohemian Rhapsody'?", "answer": "Queen"},
-            {"question": "Кто такой Mozart?", "answer": "Композитор"},
-            {"question": "Инструмент с 6 струнами?", "answer": "Гитара"},
-            {"question": "Жанр: 'Hey Jude'", "answer": "Рок"},
-            {"question": "Кто исполнил 'Thriller'?", "answer": "Майкл Джексон"},
-        ],
-        "Спорт": [
-            {"question": "Количество игроков в футболе?", "answer": "11"},
-            {"question": "Количество игроков в баскетболе?", "answer": "5"},
-            {"question": "Год первой Олимпиады?", "answer": "1896"},
-            {"question": "Самый быстрый бегун?", "answer": "Болт"},
-            {"question": "Где проходила Олимпиада 2020?", "answer": "Токио"},
-        ],
-        "Литература": [
-            {"question": "Автор 'Гарри Поттера'?", "answer": "Роулинг"},
-            {"question": "Автор 'Властелина колец'?", "answer": "Толкин"},
-            {"question": "Автор 'Преступления и наказания'?", "answer": "Достоевский"},
-            {"question": "Автор 'Евгения Онегина'?", "answer": "Пушкин"},
-            {"question": "Автор 'Героя нашего времени'?", "answer": "Лермонтов"},
-        ],
-        "Еда": [
-            {"question": "Главный ингредиент пиццы?", "answer": "Тесто"},
-            {"question": "Фрукт, который не любят на пицце?", "answer": "Ананас"},
-            {"question": "Самый популярный сыр?", "answer": "Моцарелла"},
-            {"question": "Из чего делают спагетти?", "answer": "Мука"},
-            {"question": "Страна-родина пиццы?", "answer": "Италия"},
-        ],
-    }
-    
-    with open(QUIZ_FILE, "w", encoding="utf-8") as f:
-        json.dump(demo_questions, f, indent=2, ensure_ascii=False)
-    
-    return demo_questions
-
-quiz_questions_data = load_quiz_questions()
-
-# ============================================================
-#  ВИКТОРИНА
-# ============================================================
-QUIZ_CATEGORIES = 10
-QUESTIONS_PER_CATEGORY = 5
-
-quiz_active = False
-quiz_categories = []
-quiz_votes = {}
-quiz_questions = []
-quiz_current_question = 0
-quiz_score = {}
-quiz_timer = None
-quiz_ws = None
-quiz_phase = "idle"
 
 # ============================================================
 #  ДАННЫЕ
@@ -593,195 +488,6 @@ def duel_pizza(user, ws):
     return None
 
 # ============================================================
-#  ФУНКЦИИ ДЛЯ ВИКТОРИНЫ (ИСПРАВЛЕННЫЕ)
-# ============================================================
-def start_quiz_voting(ws):
-    global quiz_active, quiz_categories, quiz_votes, quiz_phase, quiz_ws, quiz_timer
-    
-    if quiz_active:
-        return "⚠️ Викторина уже активна! Дождись окончания."
-    
-    all_categories = list(quiz_questions_data.keys())
-    if len(all_categories) < 2:
-        return "❌ Недостаточно категорий для викторины! Добавь вопросы."
-    
-    quiz_categories = random.sample(all_categories, min(QUIZ_CATEGORIES, len(all_categories)))
-    quiz_votes = {cat: 0 for cat in quiz_categories}
-    quiz_phase = "voting"
-    quiz_active = True
-    quiz_ws = ws
-    
-    categories_msg = " | ".join([f"{i+1}. {cat}" for i, cat in enumerate(quiz_categories)])
-    
-    msg = f"""🎯 **ВИКТОРИНА СКОРО НАЧНЁТСЯ!** 🎯
-Победитель получит +20 🍕!
-
-📚 Категории на выбор:
-{categories_msg}
-
-🗳️ Голосуй: !голос <номер> (1-{len(quiz_categories)})
-⏰ У тебя есть 30 секунд!"""
-    
-    send_to_chat(ws, msg)
-    
-    quiz_timer = threading.Timer(30, finish_voting)
-    quiz_timer.daemon = True
-    quiz_timer.start()
-    
-    return None
-
-def finish_voting():
-    global quiz_categories, quiz_votes, quiz_phase, quiz_active, quiz_timer, quiz_ws
-    global quiz_questions, quiz_current_question, quiz_score
-    
-    if quiz_phase != "voting":
-        return
-    
-    max_votes = max(quiz_votes.values())
-    winning_categories = [cat for cat, votes in quiz_votes.items() if votes == max_votes]
-    
-    if max_votes == 0 or len(winning_categories) > 1:
-        chosen_category = random.choice(quiz_categories)
-        send_to_chat(quiz_ws, f"🤔 Ничья в голосовании! Выбрана случайная категория: **{chosen_category}**")
-    else:
-        chosen_category = winning_categories[0]
-        send_to_chat(quiz_ws, f"✅ Победила категория: **{chosen_category}!** 🎉")
-    
-    all_questions = quiz_questions_data.get(chosen_category, [])
-    
-    if len(all_questions) < QUESTIONS_PER_CATEGORY:
-        for cat in quiz_categories:
-            if cat != chosen_category:
-                all_questions.extend(quiz_questions_data.get(cat, []))
-            if len(all_questions) >= QUESTIONS_PER_CATEGORY:
-                break
-    
-    quiz_questions = random.sample(all_questions, min(QUESTIONS_PER_CATEGORY, len(all_questions)))
-    quiz_current_question = 0
-    quiz_score = {}
-    quiz_phase = "questions"
-    
-    send_to_chat(quiz_ws, f"🎯 **ВИКТОРИНА НАЧИНАЕТСЯ!** 📚\nКатегория: {chosen_category}\nВсего вопросов: {len(quiz_questions)}\n\nПервый вопрос:")
-    
-    if quiz_timer:
-        quiz_timer.cancel()
-        quiz_timer = None
-    
-    ask_next_question()
-
-def ask_next_question():
-    global quiz_current_question, quiz_questions, quiz_phase, quiz_ws, quiz_timer
-    
-    if quiz_current_question >= len(quiz_questions):
-        finish_quiz()
-        return
-    
-    question_data = quiz_questions[quiz_current_question]
-    question_num = quiz_current_question + 1
-    total = len(quiz_questions)
-    
-    msg = f"📝 **Вопрос {question_num}/{total}:**\n{question_data['question']}\n\n✍️ Пиши ответ в чат! У тебя 15 секунд."
-    send_to_chat(quiz_ws, msg)
-    
-    quiz_timer = threading.Timer(15, next_question_timeout)
-    quiz_timer.daemon = True
-    quiz_timer.start()
-
-def next_question_timeout():
-    global quiz_current_question, quiz_ws, quiz_timer
-    
-    quiz_current_question += 1
-    send_to_chat(quiz_ws, "⏰ Время вышло! Следующий вопрос...")
-    
-    if quiz_timer:
-        quiz_timer.cancel()
-        quiz_timer = None
-    
-    ask_next_question()
-
-def check_quiz_answer(user, answer):
-    global quiz_current_question, quiz_questions, quiz_phase, quiz_score, quiz_timer, quiz_ws
-    
-    if quiz_phase != "questions":
-        return None
-    
-    if quiz_current_question >= len(quiz_questions):
-        return None
-    
-    question_data = quiz_questions[quiz_current_question]
-    correct_answer = question_data['answer'].lower()
-    user_answer = answer.lower()
-    
-    if user_answer == correct_answer or user_answer in correct_answer.split():
-        if user not in quiz_score:
-            quiz_score[user] = 0
-        quiz_score[user] += 1
-        
-        send_to_chat(quiz_ws, f"✅ @{user} ответил правильно! +1 балл! 🎉")
-        
-        if quiz_timer:
-            quiz_timer.cancel()
-            quiz_timer = None
-        
-        quiz_current_question += 1
-        ask_next_question()
-        return None
-    else:
-        return f"❌ @{user}, неправильно! Попробуй ещё..."
-
-def finish_quiz():
-    global quiz_active, quiz_phase, quiz_ws, quiz_score, quiz_timer
-    
-    quiz_phase = "ended"
-    quiz_active = False
-    
-    if quiz_timer:
-        quiz_timer.cancel()
-        quiz_timer = None
-    
-    if not quiz_score:
-        send_to_chat(quiz_ws, "😔 Никто не ответил ни на один вопрос! Викторина завершена.")
-        return
-    
-    winner = max(quiz_score, key=quiz_score.get)
-    max_score = quiz_score[winner]
-    
-    winners = [user for user, score in quiz_score.items() if score == max_score]
-    
-    if len(winners) > 1:
-        winner = random.choice(winners)
-        send_to_chat(quiz_ws, f"🤝 Ничья! Победитель выбран случайно: @{winner}!")
-    
-    player = get_player(winner)
-    player["pizza"] += 20
-    player["total_pizza"] += 20
-    save_player(winner)
-    
-    scoreboard = " | ".join([f"@{u}: {s}" for u, s in sorted(quiz_score.items(), key=lambda x: x[1], reverse=True)])
-    send_to_chat(quiz_ws, f"""🏆 **ВИКТОРИНА ЗАВЕРШЕНА!** 🏆
-Победитель: @{winner} с {max_score} баллами!
-@{winner} получает 20 🍕! 🎉
-
-📊 Результаты:
-{scoreboard}""")
-
-def stop_quiz(ws):
-    global quiz_active, quiz_phase, quiz_timer, quiz_ws
-    
-    if not quiz_active:
-        return "⚠️ Викторина не активна!"
-    
-    quiz_active = False
-    quiz_phase = "ended"
-    
-    if quiz_timer:
-        quiz_timer.cancel()
-        quiz_timer = None
-    
-    send_to_chat(ws, "🛑 Викторина остановлена создателем!")
-    return "✅ Викторина остановлена!"
-
-# ============================================================
 #  ПЕРЕВОДЧИК (ОФЛАЙН)
 # ============================================================
 def translate_offline(text):
@@ -793,6 +499,7 @@ def translate_offline(text):
         if clean_word in dictionary:
             translated.append(dictionary[clean_word])
         else:
+            # Проверяем составные части
             found = False
             for key in dictionary:
                 if key in clean_word:
@@ -846,15 +553,6 @@ def handle_command(user, cmd, args, ws=None):
                 players[name]["total_pizza"] = 0
             save_data(players)
             return "👑 @kvakish_, у ВСЕХ игроков пицца обнулена до 0! 🍕"
-        
-        elif cmd == "!s_r_on":
-            result = start_quiz_voting(ws)
-            if result:
-                return result
-            return None
-        
-        elif cmd == "!s_r_off":
-            return stop_quiz(ws)
 
     # ============================================================
     #  ДУЭЛИ
@@ -973,6 +671,9 @@ def handle_command(user, cmd, args, ws=None):
         result = check_event_guess(user, guess)
         return result
     
+    # ============================================================
+    #  ШУТОЧНАЯ КОМАНДА !АНАНАС
+    # ============================================================
     elif cmd == "!ананас":
         target = args[0].replace('@', '') if args else user
         
@@ -992,6 +693,9 @@ def handle_command(user, cmd, args, ws=None):
         
         return random.choice(reactions)
     
+    # ============================================================
+    #  ПЕРЕВОДЧИК (ОФЛАЙН)
+    # ============================================================
     elif cmd == "!fasttrans":
         if not args:
             return f"❌ @{user}, напиши: !fasttrans <текст для перевода>"
@@ -1031,12 +735,8 @@ def handle_command(user, cmd, args, ws=None):
 ❌ !отказаться_дуэль — отказаться от дуэли
 🎲 !шанс <текст> — случайный процент
 🍕 !рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
-🍍 !ананас @ник — испортить пиццу ананасом
+🍍 !ананас @ник — испортить пиццу ананасом (без @ника — испортит себе)
 🗣️ !fasttrans <текст> — перевод на пиццерийский (офлайн, 30к слов)
-🎯 !s_r_on — запустить викторину (только создатель)
-⛔ !s_r_off — остановить викторину (только создатель)
-🗳️ !голос <номер> — проголосовать за категорию в викторине
-📝 <ответ> — ответить на вопрос викторины
 ❓ !помощь — это сообщение
 
 👑 Команды создателя:
@@ -1044,9 +744,7 @@ def handle_command(user, cmd, args, ws=None):
 !стоп_ивент
 !обнулить_всех
 !всё_99999+
-!i_b_th_off
-!s_r_on
-!s_r_off"""
+!i_b_th_off"""
     
     return None
 
@@ -1054,8 +752,7 @@ def handle_command(user, cmd, args, ws=None):
 #  WEBSOCKET
 # ============================================================
 def on_message(ws, msg):
-    global event_ws, quiz_phase, quiz_categories, quiz_votes
-    
+    global event_ws
     if not event_ws:
         event_ws = ws
     
@@ -1073,40 +770,13 @@ def on_message(ws, msg):
                 if user.lower() == TWITCH_BOT_NICKNAME.lower():
                     continue
                 print(f"💬 {user}: {text}")
-                
-                # Проверяем команду голосования
-                if text.startswith('!голос'):
-                    args = text.split()
-                    if len(args) > 1:
-                        try:
-                            vote_num = int(args[1]) - 1
-                            if quiz_phase == "voting" and 0 <= vote_num < len(quiz_categories):
-                                chosen_cat = quiz_categories[vote_num]
-                                quiz_votes[chosen_cat] = quiz_votes.get(chosen_cat, 0) + 1
-                                send_to_chat(ws, f"🗳️ @{user}, твой голос за категорию '{chosen_cat}' учтён!")
-                            else:
-                                send_to_chat(ws, f"❌ @{user}, голосование не активно или неверный номер!")
-                        except:
-                            send_to_chat(ws, f"❌ @{user}, напиши: !голос <номер>")
-                    continue
-                
-                # Обычные команды
                 if text.startswith('!'):
                     args = text.split()
-                    cmd = args[0]
-                    resp = handle_command(user, cmd, args[1:], ws)
+                    resp = handle_command(user, args[0], args[1:], ws)
                     if resp:
                         send_to_chat(ws, resp)
-                else:
-                    # Если сообщение без команды — проверяем ответ на викторину
-                    if quiz_active and quiz_phase == "questions":
-                        if user.lower() != TWITCH_BOT_NICKNAME.lower():
-                            result = check_quiz_answer(user, text)
-                            if result:
-                                send_to_chat(ws, result)
-                                
             except Exception as e:
-                print(f"⚠️ Ошибка: {e}")
+                print(f"⚠️ {e}")
 
 def start_bot():
     print("🔄 Подключение...")
@@ -1118,7 +788,7 @@ def start_bot():
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
             print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот с викториной и переводчиком запущен! Пиши !помощь")
+            send_to_chat(ws, "🍕 Пицца-бот с офлайн-переводчиком запущен! Пиши !помощь")
             
             while True:
                 try:
@@ -1129,7 +799,7 @@ def start_bot():
                     print("❌ Разрыв, переподключение...")
                     break
                 except Exception as e:
-                    print(f"⚠️ Ошибка: {e}")
+                    print(f"⚠️ {e}")
                     break
         except Exception as e:
             print(f"❌ Ошибка: {e}")
