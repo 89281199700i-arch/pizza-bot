@@ -15,100 +15,10 @@ TWITCH_CHANNEL = "#QumosX"
 ADMIN_USER = "kvakish_"
 
 SAVE_FILE = "pizza_data.json"
-DICT_FILE = "dictionary.json"
 COOLDOWN_TIME = 5
 EVENT_TIMEOUT = 60
 
-print("🚀 ПИЦЦА-БОТ С ОФЛАЙН-ПЕРЕВОДЧИКОМ")
-
-# ============================================================
-#  СОЗДАНИЕ СЛОВАРЯ (30 000 слов)
-# ============================================================
-def generate_dictionary():
-    base_words = [
-        "привет", "пока", "как", "дела", "спасибо", "пицца", "ананас", "бот", "код",
-        "игра", "победа", "поражение", "день", "ночь", "солнце", "луна", "звезда",
-        "небо", "вода", "огонь", "земля", "ветер", "дождь", "снег", "лед", "гора",
-        "река", "море", "океан", "лес", "поле", "город", "деревня", "дом", "квартира",
-        "комната", "кухня", "ванна", "туалет", "коридор", "лестница", "лифт", "крыша",
-        "стена", "пол", "потолок", "окно", "дверь", "стол", "стул", "кровать", "диван",
-        "шкаф", "зеркало", "лампа", "свет", "тень", "цвет", "форма", "размер", "вес",
-        "длина", "ширина", "высота", "глубина", "скорость", "время", "дата", "год",
-        "месяц", "неделя", "час", "минута", "секунда", "мгновение", "вечность",
-        "космос", "галактика", "планета", "спутник", "астероид", "комета", "метеорит",
-        "черная_дыра", "туманность", "квазар", "пульсар", "нейтронная_звезда",
-        "компьютер", "монитор", "клавиатура", "мышь", "процессор", "память", "диск",
-        "файл", "папка", "программа", "код", "скрипт", "сервер", "клиент", "сеть",
-        "интернет", "сайт", "страница", "ссылка", "поиск", "браузер", "чат", "бот",
-        "пицца", "тесто", "соус", "сыр", "колбаса", "грибы", "овощи", "специи"
-    ]
-    
-    prefixes = ["супер", "мега", "ультра", "гипер", "архи", "мульти", "поли", "анти", "контр"]
-    suffixes = ["ный", "овой", "ельный", "истый", "астый", "чий", "ский", "овый", "евый"]
-    
-    dictionary = {}
-    words_added = 0
-    
-    # Добавляем базовые слова
-    for word in base_words:
-        translation = word
-        ru_to_en = {
-            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'ye', 'ё': 'yo',
-            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-            'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
-            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-            ' ': '_'
-        }
-        for ru, en in ru_to_en.items():
-            translation = translation.replace(ru, en)
-        dictionary[word] = translation
-        words_added += 1
-    
-    # Генерируем до 30 000
-    while words_added < 30000:
-        base = random.choice(base_words)
-        prefix = random.choice(prefixes) if random.random() > 0.5 else ""
-        suffix = random.choice(suffixes) if random.random() > 0.5 else ""
-        new_word = prefix + base + suffix
-        
-        if new_word not in dictionary and len(new_word) > 0:
-            translation = new_word
-            ru_to_en = {
-                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'ye', 'ё': 'yo',
-                'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-                'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-                'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
-                'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-                ' ': '_'
-            }
-            for ru, en in ru_to_en.items():
-                translation = translation.replace(ru, en)
-            dictionary[new_word] = translation
-            words_added += 1
-    
-    return dictionary
-
-def load_dictionary():
-    if os.path.exists(DICT_FILE):
-        try:
-            with open(DICT_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                print(f"✅ Загружен словарь: {len(data)} слов")
-                return data
-        except:
-            pass
-    
-    print("🔄 Генерация словаря на 30 000 слов... Это может занять 20-30 секунд...")
-    dictionary = generate_dictionary()
-    
-    with open(DICT_FILE, "w", encoding="utf-8") as f:
-        json.dump(dictionary, f, indent=2, ensure_ascii=False)
-    
-    print(f"✅ Создан словарь: {len(dictionary)} слов")
-    return dictionary
-
-dictionary = load_dictionary()
+print("🚀 ПИЦЦА-БОТ С ОПРОСАМИ")
 
 # ============================================================
 #  ДАННЫЕ
@@ -148,6 +58,19 @@ event_ingredients = [
 ]
 event_ws = None
 
+# ============================================================
+#  ОПРОСЫ
+# ============================================================
+poll_active = False
+poll_question = ""
+poll_timer = None
+poll_ws = None
+poll_votes = {}
+poll_duration = 0
+
+# ============================================================
+#  ФУНКЦИИ
+# ============================================================
 def get_player(user):
     if user not in players:
         players[user] = {
@@ -168,9 +91,6 @@ def get_player(user):
 def save_player(user):
     save_data(players)
 
-# ============================================================
-#  ОТПРАВКА В ЧАТ
-# ============================================================
 def send_to_chat(ws, msg):
     if ws and ws.connected:
         try:
@@ -488,28 +408,111 @@ def duel_pizza(user, ws):
     return None
 
 # ============================================================
-#  ПЕРЕВОДЧИК (ОФЛАЙН)
+#  ОПРОСЫ
 # ============================================================
-def translate_offline(text):
-    words = text.lower().split()
-    translated = []
+def start_poll(ws, question, duration):
+    global poll_active, poll_question, poll_timer, poll_ws, poll_votes, poll_duration
     
-    for word in words:
-        clean_word = word.strip('.,!?;:()[]{}')
-        if clean_word in dictionary:
-            translated.append(dictionary[clean_word])
-        else:
-            # Проверяем составные части
-            found = False
-            for key in dictionary:
-                if key in clean_word:
-                    translated.append(dictionary[key])
-                    found = True
-                    break
-            if not found:
-                translated.append(word)
+    if poll_active:
+        return "⚠️ Опрос уже активен! Дождись окончания."
     
-    return ' '.join(translated)
+    if not question:
+        return "❌ Напиши: !опрос <текст> <длительность в сек>"
+    
+    try:
+        poll_duration = int(duration)
+        if poll_duration < 5:
+            poll_duration = 5
+        if poll_duration > 300:
+            poll_duration = 300
+    except:
+        poll_duration = 30
+    
+    poll_active = True
+    poll_question = question
+    poll_votes = {}
+    poll_ws = ws
+    
+    msg = f"""📊 **ОПРОС:** {question}
+⏰ У вас {poll_duration} секунд!
+🗳️ Отдать голос: !vote + или !vote -
+    
+Голосуйте! 🔥"""
+    
+    send_to_chat(ws, msg)
+    
+    poll_timer = threading.Timer(poll_duration, finish_poll)
+    poll_timer.daemon = True
+    poll_timer.start()
+    
+    return None
+
+def vote_poll(user, choice):
+    global poll_active, poll_votes, poll_ws
+    
+    if not poll_active:
+        return "⚠️ Опрос не активен!"
+    
+    if choice not in ["+", "-"]:
+        return "❌ Используй: !vote + или !vote -"
+    
+    # Убираем предыдущий голос пользователя
+    for key in list(poll_votes.keys()):
+        if user in poll_votes[key]:
+            poll_votes[key].remove(user)
+    
+    # Добавляем новый голос
+    if choice not in poll_votes:
+        poll_votes[choice] = []
+    poll_votes[choice].append(user)
+    
+    total_yes = len(poll_votes.get("+", []))
+    total_no = len(poll_votes.get("-", []))
+    
+    return f"🗳️ @{user}, твой голос учтён! ✅ За: {total_yes} | ❌ Против: {total_no}"
+
+def finish_poll():
+    global poll_active, poll_question, poll_timer, poll_ws, poll_votes
+    
+    poll_active = False
+    
+    total_yes = len(poll_votes.get("+", []))
+    total_no = len(poll_votes.get("-", []))
+    total_votes = total_yes + total_no
+    
+    if total_votes == 0:
+        msg = f"""📊 **ОПРОС ЗАВЕРШЁН!**
+Вопрос: {poll_question}
+😔 Никто не проголосовал!"""
+    else:
+        percent_yes = round((total_yes / total_votes) * 100, 1)
+        percent_no = round((total_no / total_votes) * 100, 1)
+        
+        msg = f"""📊 **ОПРОС ЗАВЕРШЁН!**
+Вопрос: {poll_question}
+✅ За: {total_yes} ({percent_yes}%)
+❌ Против: {total_no} ({percent_no}%)
+📊 Всего голосов: {total_votes}"""
+    
+    send_to_chat(poll_ws, msg)
+    
+    if poll_timer:
+        poll_timer.cancel()
+        poll_timer = None
+
+def stop_poll(ws):
+    global poll_active, poll_timer
+    
+    if not poll_active:
+        return "⚠️ Опрос не активен!"
+    
+    poll_active = False
+    if poll_timer:
+        poll_timer.cancel()
+        poll_timer = None
+    
+    send_to_chat(ws, "🛑 Опрос остановлен создателем!")
+    return "✅ Опрос остановлен!"
 
 # ============================================================
 #  КОМАНДЫ
@@ -553,6 +556,26 @@ def handle_command(user, cmd, args, ws=None):
                 players[name]["total_pizza"] = 0
             save_data(players)
             return "👑 @kvakish_, у ВСЕХ игроков пицца обнулена до 0! 🍕"
+        
+        elif cmd == "!опрос":
+            if not args:
+                return "❌ @{user}, напиши: !опрос <текст> <длительность в сек>"
+            
+            try:
+                duration = args[-1]
+                int(duration)
+                question = ' '.join(args[:-1])
+            except:
+                question = ' '.join(args)
+                duration = 30
+            
+            result = start_poll(ws, question, duration)
+            if result:
+                return result
+            return None
+        
+        elif cmd == "!стоп_опрос":
+            return stop_poll(ws)
 
     # ============================================================
     #  ДУЭЛИ
@@ -568,6 +591,16 @@ def handle_command(user, cmd, args, ws=None):
     
     elif cmd == "!отказаться_дуэль":
         return decline_duel(user, ws)
+
+    # ============================================================
+    #  ОПРОСЫ (ГОЛОСОВАНИЕ ДЛЯ ВСЕХ)
+    # ============================================================
+    if cmd == "!vote":
+        if not args:
+            return f"❌ @{user}, напиши: !vote + или !vote -"
+        
+        choice = args[0]
+        return vote_poll(user, choice)
 
     # ============================================================
     #  ОБЫЧНЫЕ КОМАНДЫ
@@ -671,9 +704,6 @@ def handle_command(user, cmd, args, ws=None):
         result = check_event_guess(user, guess)
         return result
     
-    # ============================================================
-    #  ШУТОЧНАЯ КОМАНДА !АНАНАС
-    # ============================================================
     elif cmd == "!ананас":
         target = args[0].replace('@', '') if args else user
         
@@ -692,18 +722,6 @@ def handle_command(user, cmd, args, ws=None):
         ]
         
         return random.choice(reactions)
-    
-    # ============================================================
-    #  ПЕРЕВОДЧИК (ОФЛАЙН)
-    # ============================================================
-    elif cmd == "!fasttrans":
-        if not args:
-            return f"❌ @{user}, напиши: !fasttrans <текст для перевода>"
-        
-        text = ' '.join(args)
-        translated = translate_offline(text)
-        
-        return f"🗣️ @{user}, перевод: \"{translated}\""
     
     elif cmd == "!магазин_бустов":
         boost_list = []
@@ -735,8 +753,8 @@ def handle_command(user, cmd, args, ws=None):
 ❌ !отказаться_дуэль — отказаться от дуэли
 🎲 !шанс <текст> — случайный процент
 🍕 !рецепт <инг1> <инг2> <инг3> <инг4> — участвовать в ивенте
-🍍 !ананас @ник — испортить пиццу ананасом (без @ника — испортит себе)
-🗣️ !fasttrans <текст> — перевод на пиццерийский (офлайн, 30к слов)
+🍍 !ананас @ник — испортить пиццу ананасом
+🗳️ !vote + или !vote - — проголосовать в опросе
 ❓ !помощь — это сообщение
 
 👑 Команды создателя:
@@ -744,7 +762,9 @@ def handle_command(user, cmd, args, ws=None):
 !стоп_ивент
 !обнулить_всех
 !всё_99999+
-!i_b_th_off"""
+!i_b_th_off
+!опрос <текст> <сек> — запустить опрос
+!стоп_опрос — остановить опрос"""
     
     return None
 
@@ -788,7 +808,7 @@ def start_bot():
             ws.send(f"NICK {TWITCH_BOT_NICKNAME}\r\n")
             ws.send(f"JOIN {TWITCH_CHANNEL}\r\n")
             print("✅ Подключено!")
-            send_to_chat(ws, "🍕 Пицца-бот с офлайн-переводчиком запущен! Пиши !помощь")
+            send_to_chat(ws, "🍕 Пицца-бот с опросами запущен! Пиши !помощь")
             
             while True:
                 try:
